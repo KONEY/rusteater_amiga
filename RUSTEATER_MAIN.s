@@ -7,7 +7,7 @@
 ;********** Constants **********
 wi		EQU 320
 he		EQU 256		; screen height
-bpls		EQU 3		; depth
+bpls		EQU 4		; depth
 bypl		EQU wi/16*2	; byte-width of 1 bitplane line (40bytes)
 bwid		EQU bpls*bypl	; byte-width of 1 pixel line (all bpls)
 ;*************
@@ -21,29 +21,81 @@ Demo:			;a4=VBR, a6=Custom Registers Base addr
 	LEA	BGPLANE0,A0
 	LEA	COPPER\.BplPtrs,A1
 	BSR.W	PokePtrs
-	LEA	BGPLANE1,A0
+	LEA	BGPLANE0,A0
+	LEA	-2(A0),A0
 	LEA	COPPER\.BplPtrs+8,A1
 	BSR.W	PokePtrs
+	;LEA	BG_MASK,A0
 	LEA	BGPLANE2,A0
 	LEA	COPPER\.BplPtrs+16,A1
 	BSR.W	PokePtrs
-
-	; #### CPU INTENSIVE TASKS BEFORE STARTING MUSIC
-	; #### CPU INTENSIVE TASKS BEFORE STARTING MUSIC
+	LEA	COPPER\.BplPtrs+24,A1
+	BSR.W	PokePtrs
 
 	MOVE.L	#COPPER,COP1LC
+
+	; #### CPU INTENSIVE TASKS BEFORE STARTING MUSIC
+	MOVE.L	#$F80000,A0
+	LEA	BGPLANE0,A4
+	LEA	BGPLANE1,A5
+	;LEA	42(A5),A5
+	BSR.W	__RANDOMIZE_PLANE
+	; #### CPU INTENSIVE TASKS BEFORE STARTING MUSIC
+
+	LEA	BGPLANE0,A2
+	LEA	BGPLANE0,A3
+	MOVE.L	#$5F05A0F0,D7
+	;MOVE.B	$DFF006,D7
 ;********************  main loop  ********************
+	;MOVE.L	#$F80000,A0
+	MOVE.L	#$F80000,A0
 MainLoop:
 	; do stuff here :)
 	;MOVE.W	P61_Pos,D5	; SONG_BLOCKS_EVENTS:
-	LEA	TIMELINE,A3	; FOR TIMED EVENTS ON BLOCKS
-	ADD.W	D5,D5		; CALCULATES OFFSET (OPTIMIZED)
-	ADD.W	D5,D5		; CALCULATES OFFSET (OPTIMIZED)
-	MOVE.L	(A3,D5),A3	; THANKS HEDGEHOG!!
-	JSR	(A3)		; EXECUTE SUBROUTINE BLOCK#
+	;LEA	TIMELINE,A3	; FOR TIMED EVENTS ON BLOCKS
+	;ADD.W	D5,D5		; CALCULATES OFFSET (OPTIMIZED)
+	;ADD.W	D5,D5		; CALCULATES OFFSET (OPTIMIZED)
+	;MOVE.L	(A3,D5),A3	; THANKS HEDGEHOG!!
+	;JSR	(A3)		; EXECUTE SUBROUTINE BLOCK#
+
+	LEA	14(A2),A2
+	MOVE.L	A2,A0
+	LEA	COPPER\.BplPtrs,A1
+	;BSR.W	PokePtrs
+	
+	TST.B	FRAME_STROBE
+	BNE.W	.oddFrame
+	MOVE.B	#1,FRAME_STROBE
+
+	;ROR.B	D7
+
+	LEA	40(A2),A3
+	MOVE.L	A3,A0
+	BRA.W	.evenFrame
+	.oddFrame:
+	MOVE.B	#0,FRAME_STROBE
+	ROR.L	D7
+	LEA	-80(A2),A3
+	MOVE.L	A3,A0
+	.evenFrame:
+
+	LEA	COPPER\.BplPtrs+8,A1
+	;BSR.W	PokePtrs
+
+	; #### CPU INTENSIVE TASKS BEFORE STARTING MUSIC
+
+	MOVE.L	#$F80000,A0
+	LEA	BGPLANE0,A4
+	;LEA	BGPLANE1,A5
+	;LEA	42(A5),A5
+	BSR.W	__RANDOMIZE_PLANE
+	;LEA	BGPLANE0,A4
+	LEA	-4(A4),A4
+	BSR.W	__RANDOMIZE_PLANE
+	; #### CPU INTENSIVE TASKS BEFORE STARTING MUSIC
 
 	.WaitRasterCopper:
-	;MOVE.W	#$0FF0,$DFF180	; show rastertime left down to $12c
+	;MOVE.W	#$0F0F,$DFF180	; show rastertime left down to $12c
 	BTST	#$4,INTENAR+1
 	BNE.S	.WaitRasterCopper
 	;MOVE.W	#$0F00,$DFF180	; show rastertime left down to $12c
@@ -94,15 +146,109 @@ VBint:				; Blank template VERTB interrupt
 	movem.l	(sp)+,d0/a6	; restore
 	rte
 
+__RANDOMIZE_PLANE:
+	MOVE.W	#(bypl/2)*(45)-1,D4
+	BSR.S	_RandomWord
+	SWAP	D5
+	MOVE.W	D7,D5
+	;MOVE.B	D3,D5
+	;SWAP	D5
+	;BSR.S	_RandomWord
+	;MOVE.W	D7,D5
+	MOVE.L	D5,D1
+	.innerloop:
+	ROR.L	D1
+	;SWAP	D5
+	MOVE.L	D1,D5
+	MOVE.B	(A0)+,D5
+	NOT.L	D5
+	EOR.B	D3,D5
+	ASR.W	D5
+	ROL.L	D5
+	;MOVE.B	D5,(A4)
+	EOR.W	D4,D5
+	NOT.L	D5
+	;SWAP	D5
+	MOVE.L	D5,(A4)
+	;SWAP	D5
+	BTST	D4,D5
+	BNE.S	.skip
+	;MOVE.B	$DFF006,$DFF180	; SHOW ACTIVITY :)
+	;LEA	2(A4),A4
+	ROL.L	D1
+	SWAP	D1
+	.skip:
+	LEA	2(A4),A4
+	DBRA	D4,.innerloop
+	;MOVE.W	#$0000,$DFF180	; show rastertime left down to $12c
+	RTS
+
+	_RandomWord:
+	bsr	_RandomByte
+	ROL.W	#8,D5
+	_RandomByte:
+	MOVE.B	$DFF007,D5	;$dff00a $dff00b for mouse pos
+	MOVE.B	$BFD800,D3
+	EOR.B	D3,D5
+	RTS
+
+__RANDOMIZE_PLANE_V1:
+	MOVE.L	#$F80000,A0
+	MOVE.W	#(bypl/2/4)*he-1,D4
+	BSR.S	_RandomWord1
+	SWAP	D5
+	MOVE.B	D3,D5
+	MOVE.L	D5,D1
+	.innerloop:
+	ROR.L	D1
+	MOVE.W	D1,D5
+	SWAP	D5
+	MOVE.B	(A0)+,D5
+	NOT.L	D5
+	AND.B	D4,D5
+	ASR.W	D4,D5
+	MOVE.B	D5,(A5)
+	ROL.L	D5
+	;NOT.L	D5
+	ASR.W	D4,D5
+	MOVE.W	D5,(A4)
+	ROR.L	D5
+	NOT.L	D5
+	MOVE.L	D5,2(A4)
+	ROL.L	D5
+	MOVE.L	D5,-2(A5)
+	BTST	#$0,D5
+	BNE.S	.skip
+	;NOT.B	D1
+	ROR.L	D1
+	SWAP	D1
+
+	.skip:
+	LEA	2(A4),A4
+	LEA	2(A5),A5
+	DBRA	D4,.innerloop
+	RTS
+
+	_RandomWord1:
+	bsr	_RandomByte
+	ROL.W	#8,D5
+	_RandomByte1:
+	MOVE.B	$DFF007,D5	;$dff00a $dff00b for mouse pos
+	MOVE.B	$BFD800,D3
+	EOR.B	D3,D5
+	RTS
+
 __BLK_0:	RTS
 
 ;********** Fastmem Data **********
 TIMELINE:		DC.L __BLK_0,__BLK_0,__BLK_0,__BLK_0
+FRAME_STROBE:	DC.B 0,0
 
 ;*******************************************************************************
 	SECTION	ChipData,DATA_C	;declared data that must be in chipmem
 ;*******************************************************************************
 
+BG_MASK:	INCBIN "KO_mask_test.raw"
 	; INCLUDES HERE
 
 COPPER:
@@ -117,10 +263,10 @@ COPPER:
 	DC.W $102,0	; SCROLL REGISTER (AND PLAYFIELD PRI)
 
 	.Palette:
-	DC.W $0180,$0000,$0182,$0FFF,$0184,$0F69,$0186,$0F08
-	DC.W $0188,$0F00,$018A,$0F70,$018C,$0FB0,$018E,$0906
-	DC.W $0190,$0406,$0192,$0015,$0194,$0014,$0196,$0002
-	DC.W $0198,$07DF,$019A,$005B,$019C,$0BF4,$019E,$01C7
+	DC.W $0180,$0111,$0182,$0333,$0184,$0777,$0186,$0BBB
+	DC.W $0188,$0CCC,$018A,$0333,$018C,$0BBA,$018E,$0443
+	DC.W $0190,$0110,$0192,$0110,$0194,$0110,$0196,$0110
+	DC.W $0198,$0111,$019A,$0111,$019C,$0111,$019E,$0111
 
 	.SpriteColors:
 	DC.W $01A0,$0000
@@ -178,7 +324,8 @@ COPPER:
 	SECTION ChipBuffers,BSS_C	;BSS doesn't count toward exe size
 ;*******************************************************************************
 
-BGPLANE0:		DS.B he/2*bypl
-BGPLANE1:		DS.B he/2*bypl
-BGPLANE2:		DS.B he/2*bypl
+BLEEDTOP:		DS.B bypl
+BGPLANE0:		DS.B he*bypl
+BGPLANE1:		DS.B he*bypl
+BGPLANE2:		DS.B he*bypl
 END
