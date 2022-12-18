@@ -25,8 +25,9 @@ Demo:			;a4=VBR, a6=Custom Registers Base addr
 	LEA	-2(A0),A0
 	LEA	COPPER\.BplPtrs+8,A1
 	BSR.W	PokePtrs
-	;LEA	BG_MASK,A0
-	LEA	BGPLANE2,A0
+	LEA	BG_MASK,A0
+	LEA	2000(A0),A0
+	;LEA	BGPLANE2,A0
 	LEA	COPPER\.BplPtrs+16,A1
 	BSR.W	PokePtrs
 	LEA	COPPER\.BplPtrs+24,A1
@@ -39,7 +40,7 @@ Demo:			;a4=VBR, a6=Custom Registers Base addr
 	LEA	BGPLANE0,A4
 	LEA	BGPLANE1,A5
 	;LEA	42(A5),A5
-	BSR.W	__RANDOMIZE_PLANE
+	;BSR.W	__RANDOMIZE_PLANE
 	; #### CPU INTENSIVE TASKS BEFORE STARTING MUSIC
 
 	LEA	BGPLANE0,A2
@@ -47,8 +48,6 @@ Demo:			;a4=VBR, a6=Custom Registers Base addr
 	MOVE.L	#$5F05A0F0,D7
 	;MOVE.B	$DFF006,D7
 ;********************  main loop  ********************
-	;MOVE.L	#$F80000,A0
-	MOVE.L	#$F80000,A0
 MainLoop:
 	; do stuff here :)
 	;MOVE.W	P61_Pos,D5	; SONG_BLOCKS_EVENTS:
@@ -58,41 +57,24 @@ MainLoop:
 	;MOVE.L	(A3,D5),A3	; THANKS HEDGEHOG!!
 	;JSR	(A3)		; EXECUTE SUBROUTINE BLOCK#
 
-	LEA	14(A2),A2
-	MOVE.L	A2,A0
-	LEA	COPPER\.BplPtrs,A1
-	;BSR.W	PokePtrs
-	
+	;MOVE.L	KICKSTART_ADDR,A0
+
 	TST.B	FRAME_STROBE
 	BNE.W	.oddFrame
 	MOVE.B	#1,FRAME_STROBE
 
-	;ROR.B	D7
+	ROR.L	D7
+	LEA	BGPLANE0,A4
+	BSR.W	__RANDOMIZE_PLANE
 
-	LEA	40(A2),A3
-	MOVE.L	A3,A0
 	BRA.W	.evenFrame
 	.oddFrame:
+
 	MOVE.B	#0,FRAME_STROBE
-	ROR.L	D7
-	LEA	-80(A2),A3
-	MOVE.L	A3,A0
-	.evenFrame:
-
-	LEA	COPPER\.BplPtrs+8,A1
-	;BSR.W	PokePtrs
-
-	; #### CPU INTENSIVE TASKS BEFORE STARTING MUSIC
-
-	MOVE.L	#$F80000,A0
 	LEA	BGPLANE0,A4
-	;LEA	BGPLANE1,A5
-	;LEA	42(A5),A5
+	LEA	2558(A4),A4
 	BSR.W	__RANDOMIZE_PLANE
-	;LEA	BGPLANE0,A4
-	LEA	-4(A4),A4
-	BSR.W	__RANDOMIZE_PLANE
-	; #### CPU INTENSIVE TASKS BEFORE STARTING MUSIC
+	.evenFrame:
 
 	.WaitRasterCopper:
 	;MOVE.W	#$0F0F,$DFF180	; show rastertime left down to $12c
@@ -147,34 +129,24 @@ VBint:				; Blank template VERTB interrupt
 	rte
 
 __RANDOMIZE_PLANE:
-	MOVE.W	#(bypl/2)*(45)-1,D4
+	MOVE.W	#(bypl/2)*(64)-1,D4
 	BSR.S	_RandomWord
 	SWAP	D5
 	MOVE.W	D7,D5
-	;MOVE.B	D3,D5
-	;SWAP	D5
-	;BSR.S	_RandomWord
-	;MOVE.W	D7,D5
 	MOVE.L	D5,D1
 	.innerloop:
 	ROR.L	D1
-	;SWAP	D5
 	MOVE.L	D1,D5
-	MOVE.B	(A0)+,D5
+	;MOVE.B	(A0)+,D5
 	NOT.L	D5
 	EOR.B	D3,D5
 	ASR.W	D5
 	ROL.L	D5
-	;MOVE.B	D5,(A4)
 	EOR.W	D4,D5
 	NOT.L	D5
-	;SWAP	D5
 	MOVE.L	D5,(A4)
-	;SWAP	D5
 	BTST	D4,D5
 	BNE.S	.skip
-	;MOVE.B	$DFF006,$DFF180	; SHOW ACTIVITY :)
-	;LEA	2(A4),A4
 	ROL.L	D1
 	SWAP	D1
 	.skip:
@@ -243,6 +215,7 @@ __BLK_0:	RTS
 ;********** Fastmem Data **********
 TIMELINE:		DC.L __BLK_0,__BLK_0,__BLK_0,__BLK_0
 FRAME_STROBE:	DC.B 0,0
+KICKSTART_ADDR:	DC.L $F80000	; POINTERS TO BITMAPS
 
 ;*******************************************************************************
 	SECTION	ChipData,DATA_C	;declared data that must be in chipmem
