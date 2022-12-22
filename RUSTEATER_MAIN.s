@@ -10,6 +10,9 @@ he		EQU 256		; screen height
 bpls		EQU 4		; depth
 bypl		EQU wi/16*2	; byte-width of 1 bitplane line (40bytes)
 bwid		EQU bpls*bypl	; byte-width of 1 pixel line (all bpls)
+PIXEL_SIDE	EQU 32
+SCROLL_SPEED	EQU 1
+TXT_FRMSKIP 	EQU 16
 ;*************
 ;********** Demo **********	;Demo-specific non-startup code below.
 Demo:			;a4=VBR, a6=Custom Registers Base addr
@@ -18,34 +21,61 @@ Demo:			;a4=VBR, a6=Custom Registers Base addr
 	MOVE.W	#%1110000000100000,INTENA
 	MOVE.W	#%1000001111100000,DMACON
 	;*--- start copper ---*
-	LEA	BGPLANE0,A0
+	; ## EMPTY AREA ##
+	LEA	BGEMPTY,A0
 	LEA	COPPER\.BplPtrs,A1
 	BSR.W	PokePtrs
-	LEA	BGPLANE0,A0
-	LEA	-2(A0),A0
+	LEA	BGEMPTY,A0
+	;LEA	-2(A0),A0
 	LEA	COPPER\.BplPtrs+8,A1
 	BSR.W	PokePtrs
-	LEA	BG_MASK,A0
-	LEA	2000(A0),A0
-	;LEA	BGPLANE2,A0
+
+	; # NOISE AREA ##
+	LEA	BGNOISE1,A0
+	LEA	COPPER\.BplPtrs2,A1
+	BSR.W	PokePtrs
+	LEA	BGNOISE1,A0
+	LEA	-2(A0),A0
+	LEA	COPPER\.BplPtrs2+8,A1
+	BSR.W	PokePtrs
+	LEA	BGNOISE1,A0
+	LEA	-40(A0),A0
+	LEA	COPPER\.BplPtrs3,A1
+	BSR.W	PokePtrs
+	LEA	BGNOISE1,A0
+	LEA	4(A0),A0
+	LEA	COPPER\.BplPtrs3+8,A1
+	BSR.W	PokePtrs
+	; # NOISE AREA ##
+
+	;LEA	BG_MASK,A0
+	LEA	BGEMPTY,A0
 	LEA	COPPER\.BplPtrs+16,A1
 	BSR.W	PokePtrs
+	LEA	BGMASK,A0
 	LEA	COPPER\.BplPtrs+24,A1
 	BSR.W	PokePtrs
+
 
 	MOVE.L	#COPPER,COP1LC
 
 	; #### CPU INTENSIVE TASKS BEFORE STARTING MUSIC
+	LEA	PIXEL_ON,A0
+	MOVE.W	#PIXEL_SIDE-1,D0
+	.loop:
+	MOVE.L	#-1,(A0)+		; FILL THE PIXEL
+	DBRA	D0,.loop
+
 	MOVE.L	#$F80000,A0
-	LEA	BGPLANE0,A4
-	LEA	BGPLANE1,A5
+	;LEA	BGNOISE1,A4
+	;LEA	BGNOISE1,A5
 	;LEA	42(A5),A5
 	;BSR.W	__RANDOMIZE_PLANE
 	; #### CPU INTENSIVE TASKS BEFORE STARTING MUSIC
 
-	LEA	BGPLANE0,A2
-	LEA	BGPLANE0,A3
-	MOVE.L	#$5F05A0F0,D7
+	;LEA	BGNOISE1,A2
+	;LEA	BGPLANE0,A3
+	;MOVE.L	BGNOISE1,D7
 	;MOVE.B	$DFF006,D7
 ;********************  main loop  ********************
 MainLoop:
@@ -56,25 +86,50 @@ MainLoop:
 	;ADD.W	D5,D5		; CALCULATES OFFSET (OPTIMIZED)
 	;MOVE.L	(A3,D5),A3	; THANKS HEDGEHOG!!
 	;JSR	(A3)		; EXECUTE SUBROUTINE BLOCK#
-
 	;MOVE.L	KICKSTART_ADDR,A0
 
+	; ## NOISE SECTION ##
 	TST.B	FRAME_STROBE
 	BNE.W	.oddFrame
 	MOVE.B	#1,FRAME_STROBE
 
-	ROR.L	D7
-	LEA	BGPLANE0,A4
+	MOVE.W	#(bypl/2)*50-1,D4
+	LEA	BGNOISE1,A4
 	BSR.W	__RANDOMIZE_PLANE
+	ROR.L	D7
 
 	BRA.W	.evenFrame
 	.oddFrame:
-
 	MOVE.B	#0,FRAME_STROBE
-	LEA	BGPLANE0,A4
-	LEA	2558(A4),A4
+
+	MOVE.W	#(bypl/2)*50-1,D4
+	LEA	BGNOISE2,A4
 	BSR.W	__RANDOMIZE_PLANE
 	.evenFrame:
+	; ## NOISE SECTION ##
+
+	; ## MASKING SECTION ##
+	LEA	BGMASK,A5
+	BSR.W	__SCROLL_X
+
+	LEA	BGMASK,A5
+	MOVE.W	#5-1,D0
+	.loop:
+	BTST	D0,(A0)+
+	BNE.S	.off
+	LEA	PIXEL_ON,A4
+	BRA.S	.on
+	.off:
+	LEA	PIXEL_OFF,A4
+	.on:
+	BSR.W	__BLIT_PIXEL
+	ADD.L	#bypl*PIXEL_SIDE,A5
+	DBRA	D0,.loop
+	; ## MASKING SECTION ##
+
+	; ## TEXT SECTION ##
+	BSR.W	__FETCH_TXT
+	; ## TEXT SECTION ##
 
 	.WaitRasterCopper:
 	;MOVE.W	#$0F0F,$DFF180	; show rastertime left down to $12c
@@ -129,7 +184,6 @@ VBint:				; Blank template VERTB interrupt
 	rte
 
 __RANDOMIZE_PLANE:
-	MOVE.W	#(bypl/2)*(64)-1,D4
 	BSR.S	_RandomWord
 	SWAP	D5
 	MOVE.W	D7,D5
@@ -210,18 +264,98 @@ __RANDOMIZE_PLANE_V1:
 	EOR.B	D3,D5
 	RTS
 
+__BLIT_PIXEL:
+	BSR	WaitBlitter
+	MOVE.W	#%0000100111110000,BLTCON0	; BLTCON0
+	MOVE.W	#%0000000000000000,BLTCON1	; BLTCON1
+	MOVE.L	#$FFFFFFFF,BLTAFWM		; THEY'LL NEVER
+	MOVE.W	#$0,BLTAMOD		; BLTAMOD =0 for texture
+	MOVE.W	#bypl-(PIXEL_SIDE/16*2),BLTDMOD ; BLTDMOD 40-4=36
+	MOVE.L	A4,BLTAPTH		; BLTAPT
+	MOVE.L	A5,BLTDPTH
+	MOVE.W	#PIXEL_SIDE*64+(PIXEL_SIDE/16),BLTSIZE	; BLTSIZE
+	; ## MAIN BLIT ####
+	RTS
+
+__SCROLL_X:
+	MOVE.L	#%1001111100001000,D1	; %1000100111110000 +ROL.W	#4,D1
+	; ## MAIN BLIT ####
+
+	MOVE.W	#SCROLL_SPEED,D0
+	MOVE.B	D0,D1
+	ROR.W	#4,D1
+	bsr	WaitBlitter
+	MOVE.W	D1,BLTCON0		; BLTCON0
+	MOVE.W	#%0000000000000000,BLTCON1	; BLTCON1 BIT 12 DESC MODE
+	MOVE.L	#$FFFFFFFF,BLTAFWM		; THEY'LL NEVER
+	MOVE.W	#$0,BLTAMOD		; BLTAMOD
+	MOVE.W	#$0,BLTDMOD		; BLTDMOD
+
+	MOVE.W	#bypl*he-1,D6		; OPT
+	ADD.W	D6,A5
+	MOVE.W	#%0000000000000010,BLTCON1	; BLTCON1 BIT 12 DESC MODE
+
+	MOVE.L	A5,BLTAPTH		; BLTAPT
+	MOVE.L	A5,BLTDPTH
+	MOVE.W	#he*64+wi/16,BLTSIZE	; BLTSIZE
+	; ## MAIN BLIT ####
+	RTS
+
+__FETCH_TXT:
+	MOVE.W	FRAMESINDEX,D1
+	CMPI.W	#TXT_FRMSKIP,D1	; TXT_FRMSKIP
+	BNE.W	.skip
+	LEA	BGMASK,A4
+	LEA	FONT,A5
+	LEA	TEXT,A3
+	ADD.W	TEXTINDEX,A3
+	CLR.L	D2
+	MOVE.B	(A3),D2
+	CMP.B	#$AA,D2		; Siamo arrivati all'ultima word della TAB?
+	BNE.S	.proceed
+	MOVE.W	#0,TEXTINDEX	; Riparti a puntare dalla prima word
+	LEA	TEXT,A3		; FIX FOR GLITCH (I KNOW IT'S FUN... :)
+	.proceed:
+	SUBI.B	#$20,D2		; TOGLI 32 AL VALORE ASCII DEL CARATTERE, IN
+	LSL.W	#3,D2		; MOLTIPLICA PER 8 IL NUMERO PRECEDENTE,
+	ADD.W	D2,A5
+	CLR.L	D6		; RESET D6
+	MOVE.B	#8-1,D6
+	.loop:
+	MOVE.B	(A5)+,(A4)
+	ADD.W	#bypl,A4		; POSITIONING
+	DBRA	D6,.loop
+	.skip:
+	SUBI.W	#1,D1
+	TST.W	D1
+	BEQ.W	.reset
+	MOVE.W	D1,FRAMESINDEX
+	BRA.S	.jump
+	.reset:
+	ADDI.W	#1,TEXTINDEX
+	MOVE.W	#TXT_FRMSKIP,D1
+	MOVE.W	D1,FRAMESINDEX	; OTTIMIZZABILE
+	.jump:
+	RTS
+
 __BLK_0:	RTS
 
 ;********** Fastmem Data **********
 TIMELINE:		DC.L __BLK_0,__BLK_0,__BLK_0,__BLK_0
 FRAME_STROBE:	DC.B 0,0
 KICKSTART_ADDR:	DC.L $F80000	; POINTERS TO BITMAPS
+TEXTINDEX:	DC.W 0
+FRAMESINDEX:	DC.W TXT_FRMSKIP
+
+FONT:		DC.L 0,0		; SPACE CHAR
+		INCBIN "cosmicalien_font.raw",0
+		EVEN
+TEXT:		INCLUDE "textscroller.i"
 
 ;*******************************************************************************
 	SECTION	ChipData,DATA_C	;declared data that must be in chipmem
 ;*******************************************************************************
 
-BG_MASK:	INCBIN "KO_mask_test.raw"
 	; INCLUDES HERE
 
 COPPER:
@@ -236,10 +370,12 @@ COPPER:
 	DC.W $102,0	; SCROLL REGISTER (AND PLAYFIELD PRI)
 
 	.Palette:
-	DC.W $0180,$0111,$0182,$0333,$0184,$0777,$0186,$0BBB
-	DC.W $0188,$0CCC,$018A,$0333,$018C,$0BBA,$018E,$0443
-	DC.W $0190,$0110,$0192,$0110,$0194,$0110,$0196,$0110
-	DC.W $0198,$0111,$019A,$0111,$019C,$0111,$019E,$0111
+	DC.W $0180,$01f1,$0182,$0333,$0184,$0777,$0186,$0BBB
+	DC.W $0188,$0F11,$018A,$01F1,$018C,$011F,$018E,$0F1F
+	DC.W $0190,$0111,$0192,$0111,$0194,$0111,$0196,$0111
+	DC.W $0198,$0F11,$019A,$0F11,$019C,$0F11,$019E,$0F11
+	DC.W $01A0,$0F11,$01A2,$0F11,$01A4,$0F11,$01A6,$0F11
+	DC.W $01A8,$0F11,$01AA,$0F11,$01AC,$0F11,$01AE,$0F11
 
 	.SpriteColors:
 	DC.W $01A0,$0000
@@ -288,6 +424,19 @@ COPPER:
 	DC.W $013C,0,$13E,0	; 7
 
 	.Waits:
+	DC.W $4D01,$FF00		; ## START ##
+	.BplPtrs2:
+	DC.W $E0,0
+	DC.W $E2,0
+	DC.W $E4,0
+	DC.W $E6,0
+	DC.W $9001,$FF00		; ## START ##
+	.BplPtrs3:
+	DC.W $E0,0
+	DC.W $E2,0
+	DC.W $E4,0
+	DC.W $E6,0
+
 	DC.W $FFDF,$FFFE	; allow VPOS>$ff
 	DC.W $3501,$FF00	; ## RASTER END ## #$12C?
 	DC.W $009A,$0010	; CLEAR RASTER BUSY FLAG
@@ -298,7 +447,11 @@ COPPER:
 ;*******************************************************************************
 
 BLEEDTOP:		DS.B bypl
-BGPLANE0:		DS.B he*bypl
-BGPLANE1:		DS.B he*bypl
+BGNOISE1:		DS.B 50*bypl
+BGNOISE2:		DS.B 50*bypl
 BGPLANE2:		DS.B he*bypl
+BGMASK:		DS.B he*bypl
+BGEMPTY:		DS.B he*bypl
+PIXEL_ON:		DS.B PIXEL_SIDE*(PIXEL_SIDE/16*2)
+PIXEL_OFF:	DS.B PIXEL_SIDE*(PIXEL_SIDE/16*2)
 END

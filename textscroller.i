@@ -1,0 +1,3 @@
+ DC.B "TETSUO * KONEY 2023 - AMIGA cippa "
+ DC.L $AAAA
+ EVEN
