@@ -15,6 +15,15 @@ PIXELSIDE_W	EQU 32/SCROLL_SPEED
 PIXELSIDE_H	EQU 32
 TXT_FRMSKIP 	EQU PIXELSIDE_W*6
 ;*************
+_PushColorsDown:	MACRO
+	LEA	\1,A0
+	ADD.W	\2,A0		; FASTER THAN LEA \1+16
+	LEA	$DFF190,A1
+	MOVE.W	(A0),$DFF180
+	REPT 2
+	MOVE.L	(A0)+,(A1)+
+	ENDR
+		ENDM
 ;********** Demo **********	;Demo-specific non-startup code below.
 Demo:			;a4=VBR, a6=Custom Registers Base addr
 	;*--- init ---*
@@ -35,7 +44,6 @@ Demo:			;a4=VBR, a6=Custom Registers Base addr
 	LEA	BGFILLED,A0
 	LEA	COPPER\.BplPtrs+24,A1
 	BSR.W	PokePtrs
-
 	; # NOISE AREA ##
 	LEA	BGNOISE1,A0
 	LEA	COPPER\.BplPtrs2,A1
@@ -53,12 +61,12 @@ Demo:			;a4=VBR, a6=Custom Registers Base addr
 	LEA	COPPER\.BplPtrs4+8,A1
 	BSR.W	PokePtrs
 	; # NOISE AREA ##
-
 	LEA	BGMASK,A0
 	LEA	COPPER\.BplPtrs3,A1
 	BSR.W	PokePtrs
-
-	MOVE.L	#COPPER,COP1LC
+	LEA	BGFILLED,A0
+	LEA	COPPER\.BplPtrs5,A1
+	BSR.W	PokePtrs
 
 	; #### CPU INTENSIVE TASKS BEFORE STARTING MUSIC
 	LEA	BGMASK,A0
@@ -68,7 +76,12 @@ Demo:			;a4=VBR, a6=Custom Registers Base addr
 	MOVE.L	#-1,(A0)+		; FILL THE PIXEL
 	MOVE.L	#-1,(A1)+		; FILL THE PIXEL
 	DBRA	D0,.loop
+
+	_PushColorsDown	BG_COLS_TBL,#$0
+	MOVE.L	BGNOISE1,D7
 	; #### CPU INTENSIVE TASKS BEFORE STARTING MUSIC
+
+	MOVE.L	#COPPER,COP1LC
 ;********************  main loop  ********************
 MainLoop:
 	; do stuff here :)
@@ -80,6 +93,11 @@ MainLoop:
 	;JSR	(A3)		; EXECUTE SUBROUTINE BLOCK#
 	;MOVE.L	KICKSTART_ADDR,A0
 
+	MOVE.W	DUMMYINDEX,D1
+	LSR.W	D1
+	LSL.W	#$4,D1
+	_PushColorsDown	BG_COLS_TBL,D1
+
 	; ## NOISE SECTION ##
 	TST.B	FRAME_STROBE
 	BNE.W	.oddFrame
@@ -88,7 +106,6 @@ MainLoop:
 	MOVE.W	#(bypl/2)*50-1,D4
 	LEA	BGNOISE1,A4
 	BSR.W	__RANDOMIZE_PLANE
-	ROR.L	D7
 
 	BRA.W	.evenFrame
 	.oddFrame:
@@ -212,8 +229,8 @@ __RANDOMIZE_PLANE:
 	RTS
 
 	_RandomWord:
-	bsr	_RandomByte
-	ROL.W	#8,D5
+	BSR	_RandomByte
+	ROL.W	#$8,D5
 	_RandomByte:
 	MOVE.B	$DFF007,D5	;$dff00a $dff00b for mouse pos
 	MOVE.B	$BFD800,D3
@@ -415,6 +432,24 @@ FONT:		DC.L 0,0		; SPACE CHAR
 		EVEN
 TEXT:		INCLUDE "textscroller.i"
 
+BG_COLS_TBL:	DC.W $0000,$0000,$0000,$0000
+		DC.W $0110,$0110,$0110,$0110
+		DC.W $0111,$0111,$0111,$0111
+		DC.W $0111,$0111,$0111,$0111
+		DC.W $0221,$0221,$0221,$0221
+		DC.W $0222,$0222,$0222,$0222
+		DC.W $0222,$0222,$0222,$0222
+		DC.W $0332,$0332,$0332,$0332
+		DC.W $0333,$0333,$0333,$0333
+		DC.W $0443,$0443,$0443,$0443
+		DC.W $0444,$0444,$0444,$0444
+		DC.W $0555,$0555,$0555,$0555
+		DC.W $0444,$0444,$0444,$0444
+		DC.W $0222,$0222,$0222,$0222
+		DC.W $0111,$0111,$0111,$0111
+		DC.W $0110,$0110,$0110,$0110
+		DC.W $0000,$0000,$0000,$0000
+
 ;*******************************************************************************
 	SECTION	ChipData,DATA_C	;declared data that must be in chipmem
 ;*******************************************************************************
@@ -433,33 +468,13 @@ COPPER:
 	DC.W $102,0	; SCROLL REGISTER (AND PLAYFIELD PRI)
 
 	.Palette:
-	DC.W $0180,$0111,$0182,$0443,$0184,$0776,$0186,$0CCB
+	;DC.W $0180,$0111,
+	DC.W $0182,$0443,$0184,$0776,$0186,$0CCB
 	DC.W $0188,$0F11,$018A,$01F1,$018C,$011F,$018E,$0F1F
-	DC.W $0190,$0111,$0192,$0111,$0194,$0111,$0196,$0111
+	;DC.W $0190,$0111,$0192,$0111,$0194,$0111,$0196,$0111
 	DC.W $0198,$0F11,$019A,$0F11,$019C,$0F11,$019E,$0F11
 	DC.W $01A0,$0F11,$01A2,$0F11,$01A4,$0F11,$01A6,$0F11
 	DC.W $01A8,$0F11,$01AA,$0F11,$01AC,$0F11,$01AE,$0F11
-
-	;.SpriteColors:
-	;DC.W $01A0,$0000
-	;DC.W $01A2,$0FFF
-	;DC.W $01A4,$018F
-	;DC.W $01A6,$07DF
-	;
-	;DC.W $01A8,$0000
-	;DC.W $01AA,$0FFF
-	;DC.W $01AC,$018F
-	;DC.W $01AE,$07DF
-	;
-	;DC.W $01B0,$0000
-	;DC.W $01B2,$0FFF
-	;DC.W $01B4,$018F
-	;DC.W $01B6,$07DF
-	;
-	;DC.W $01B8,$0000
-	;DC.W $01BA,$0FFF
-	;DC.W $01BC,$018F
-	;DC.W $01BE,$07DF
 
 	.SpritePointers:
 	DC.W $0120,0,$122,0	; 0
@@ -503,6 +518,10 @@ COPPER:
 	DC.W $E2,0
 	DC.W $E4,0
 	DC.W $E6,0
+	DC.W $F601,$FF00		; ## START ##
+	.BplPtrs5:
+	DC.W $EC,0
+	DC.W $EE,0
 
 	DC.W $FFDF,$FFFE	; allow VPOS>$ff
 	DC.W $3501,$FF00	; ## RASTER END ## #$12C?
