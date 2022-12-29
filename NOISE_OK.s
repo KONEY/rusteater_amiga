@@ -348,7 +348,7 @@ TEXTINDEX:	DC.W 0
 FRAMESINDEX:	DC.W TXT_FRMSKIP
 
 FONT:		DC.L 0,0		; SPACE CHAR
-		INCBIN "cosmicalien_font.raw",0
+		INCBIN "c_font_leftpadding.raw",0
 		EVEN
 TEXT:		INCLUDE "textscroller.i"
 

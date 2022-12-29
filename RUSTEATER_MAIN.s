@@ -5,14 +5,14 @@
 	INCLUDE	"PhotonsMiniWrapper1.04!.s"
 	INCLUDE	"custom-registers.i"	;use if you like ;)
 ;********** Constants **********
-wi		EQU 320
+wi		EQU 320+32
 he		EQU 256		; screen height
 bpls		EQU 4		; depth
 bypl		EQU wi/16*2	; byte-width of 1 bitplane line (40bytes)
 bwid		EQU bpls*bypl	; byte-width of 1 pixel line (all bpls)
-PIXELSIDE_W	EQU 34
+SCROLL_SPEED	EQU 2
+PIXELSIDE_W	EQU 32/SCROLL_SPEED
 PIXELSIDE_H	EQU 32
-SCROLL_SPEED	EQU 1
 TXT_FRMSKIP 	EQU PIXELSIDE_W*6
 ;*************
 ;********** Demo **********	;Demo-specific non-startup code below.
@@ -62,22 +62,13 @@ Demo:			;a4=VBR, a6=Custom Registers Base addr
 
 	; #### CPU INTENSIVE TASKS BEFORE STARTING MUSIC
 	LEA	BGMASK,A0
-	MOVE.W	#bypl*he/2-1,D0
+	LEA	BGFILLED,A1
+	MOVE.W	#bypl*he/4-1,D0
 	.loop:
 	MOVE.L	#-1,(A0)+		; FILL THE PIXEL
+	MOVE.L	#-1,(A1)+		; FILL THE PIXEL
 	DBRA	D0,.loop
-
-	MOVE.L	#$F80000,A0
-	;LEA	BGNOISE1,A4
-	;LEA	BGNOISE1,A5
-	;LEA	42(A5),A5
-	;BSR.W	__RANDOMIZE_PLANE
 	; #### CPU INTENSIVE TASKS BEFORE STARTING MUSIC
-
-	;LEA	BGNOISE1,A2
-	;LEA	BGPLANE0,A3
-	;MOVE.L	BGNOISE1,D7
-	;MOVE.B	$DFF006,D7
 ;********************  main loop  ********************
 MainLoop:
 	; do stuff here :)
@@ -109,15 +100,16 @@ MainLoop:
 	.evenFrame:
 	; ## NOISE SECTION ##
 
-	BTST	#6,$BFE001	; POTINP - LMB pressed?
-	BNE.W	.dontScroll
-
 	; ## TEXT SECTION ##
 	BSR.W	__FETCH_TXT
 	; ## TEXT SECTION ##
 
+	;BTST	#6,$BFE001	; POTINP - LMB pressed?
+	;BNE.W	.dontScroll
+	.dontScroll:
+
 	; ## MASKING SECTION ##
-	LEA	BGMASK,A5
+	LEA	BGMASK+bypl-PIXELSIDE_W/16*2,A5
 	LEA	CHAR_BUFFER,A0
 	ADD.W	LINEINDEX,A0
 	MOVE.W	#5-1,D0
@@ -134,23 +126,20 @@ MainLoop:
 	ADD.L	#bypl*PIXELSIDE_H,A5
 	DBRA	D0,.loop
 
-	SUB.W	#1,DUMMYINDEX
 	TST.W	DUMMYINDEX
 	BNE.S	.sameLine
 	MOVE.W	#PIXELSIDE_W+1,DUMMYINDEX
 	ADDI.W	#1,LINEINDEX
-	MOVE.W	LINEINDEX,D0
-	CMP.W	#7-1,D0
-	BNE.S	.sameLine
-	;MOVE.W	#0,LINEINDEX
 	.sameLine:
+	SUBI.W	#1,DUMMYINDEX
 	; ## MASKING SECTION ##
 
 	; ## SCROLLING SECTION ##
 	LEA	BGMASK,A5
 	BSR.W	__SCROLL_X
 	; ## SCROLLING SECTION ##
-	.dontScroll:
+
+	;BSR.W	__HW_DISPLACE
 
 	.WaitRasterCopper:
 	;MOVE.W	#$0F0F,$DFF180	; show rastertime left down to $12c
@@ -164,14 +153,6 @@ MainLoop:
 	;BEQ.W	.exit
 	BTST	#2,$DFF016	; POTINP - RMB pressed?
 	BNE.W	MainLoop		; then loop
-
-	;BTST	#6,$BFE001
-	;BNE.S	.DontShowRasterTime
-	;BSR.W	__BLK_JMP
-	;.DontShowRasterTime:
-	;BTST	#2,$DFF016	; POTINP - RMB pressed?
-	;BNE.W	MainLoop		; then loop
-
 	;*--- exit ---*
 	.exit:
 	RTS
@@ -300,32 +281,30 @@ __BLIT_PIXEL:
 
 __SCROLL_X:
 	MOVE.L	#%1001111100001000,D1	; %1000100111110000 +ROL.W	#4,D1
-	; ## MAIN BLIT ####
-
 	MOVE.W	#SCROLL_SPEED,D0
 	MOVE.B	D0,D1
 	ROR.W	#4,D1
-	bsr	WaitBlitter
+	BSR	WaitBlitter
 	MOVE.W	D1,BLTCON0		; BLTCON0
-	MOVE.W	#%0000000000000000,BLTCON1	; BLTCON1 BIT 12 DESC MODE
-	MOVE.L	#$FFFFFFFF,BLTAFWM		; THEY'LL NEVER
-	MOVE.W	#$0,BLTAMOD		; BLTAMOD
-	MOVE.W	#$0,BLTDMOD		; BLTDMOD
-
-	MOVE.W	#bypl*he-1,D6		; OPT
+	MOVE.W	#bypl*(PIXELSIDE_H*5)-1,D6	; POSITION FOR DESC
 	ADD.W	D6,A5
 	MOVE.W	#%0000000000000010,BLTCON1	; BLTCON1 BIT 12 DESC MODE
 
+	MOVE.L	#$FFFFFFFF,BLTAFWM		; THEY'LL NEVER
+	MOVE.L	#$0,BLTAMOD		; BLTAMOD
+
 	MOVE.L	A5,BLTAPTH		; BLTAPT
 	MOVE.L	A5,BLTDPTH
-	MOVE.W	#he*64+wi/16,BLTSIZE	; BLTSIZE
+	MOVE.W	#(PIXELSIDE_H*5)*64+wi/16,BLTSIZE ; BLTSIZE
 	; ## MAIN BLIT ####
 	RTS
 
 __FETCH_TXT:
 	MOVE.W	FRAMESINDEX,D1
+	SUBI.W	#1,FRAMESINDEX
 	CMPI.W	#TXT_FRMSKIP,D1	; TXT_FRMSKIP
 	BNE.W	.skip
+	MOVE.W	#0,LINEINDEX
 	LEA	CHAR_BUFFER+5,A4
 	LEA	FONT+3,A5
 	LEA	TEXT,A3
@@ -349,22 +328,15 @@ __FETCH_TXT:
 	BSR.W	__ROTATE_MATRIX
 
 	.skip:
-	SUBI.W	#1,D1
-	TST.W	D1
-	BEQ.W	.reset
-	MOVE.W	D1,FRAMESINDEX
-	BRA.S	.jump
-	.reset:
+	TST.W	FRAMESINDEX
+	BNE.S	.jump
 	ADDI.W	#1,TEXTINDEX
-	MOVE.W	#TXT_FRMSKIP,D1
-	MOVE.W	D1,FRAMESINDEX	; OTTIMIZZABILE
-	MOVE.W	#0,LINEINDEX
+	MOVE.W	#TXT_FRMSKIP,FRAMESINDEX	; OTTIMIZZABILE
 	MOVE.W	#PIXELSIDE_W+1,DUMMYINDEX
 	.jump:
 	RTS
 
 __ROTATE_MATRIX:
-	MOVEM.L	D0-D7,-(SP)	; SAVE TO STACK
 	CLR.L	D0		; RESET D6
 	LEA	CHAR_BUFFER,A4
 	LEA	CHAR_ROTATION,A5
@@ -378,20 +350,53 @@ __ROTATE_MATRIX:
 	MOVE.W	#0,D6
 	MOVE.W	#6-1,D1
 	.iterate:
-	CLR.W	$100		; DEBUG | w 0 100 2
 	MOVE.B	(A5)+,D0
 	LEA	(A1),A4		; BUFFER
-	MOVE.W	#6-1,D7
+	MOVE.W	#6-1,D2
 	.loop:
-	BTST	D7,D0
+	BTST	D2,D0
 	BNE.S	.skip0
 	BSET.B	D6,(A4)
 	.skip0:
 	MOVE.B	(A4),(A4)+
-	DBRA	D7,.loop
+	DBRA	D2,.loop
 	ADD.W	#1,D6
 	DBRA	D1,.iterate
-	MOVEM.L	(SP)+,D0-D7	; FETCH FROM STACK
+	RTS
+
+__HW_DISPLACE:
+	CLR.L	D2
+	MOVE.W	$DFF006,D4	; for bug?
+	.waitVisibleRaster:
+	MOVE.W	$DFF006,D4
+	AND.W	#$FF00,D4		; read vertical beam
+	CMP.W	#$3700,D4		; 2C
+	BNE.S	.waitVisibleRaster
+
+	.waitNextRaster:
+	MOVE.W	$DFF006,D2
+	AND.W	#$FF00,D2		; read vertical beam
+	CMP.W	D4,D2
+	BEQ.S	.waitNextRaster
+
+	MOVE.W	D2,D4
+	MOVE.B	$DFF007,D5	; $dff00a $dff00b for mouse pos
+	MOVE.B	$BFD800,D1
+	EOR.B	D1,D5
+	MOVE.W	D5,BPLCON1	; 19DEA68E GLITCHA
+
+	MOVE.W	$DFF004,D0	; Read vert most sig. bits
+	BTST	#0,D0
+	BEQ.S	.waitNextRaster
+
+	CMP.W	#$0A00,D2		; DONT DISPLACE TXT
+	BGE.S	.dontSkip		; DONT DISPLACE TXT
+	MOVE.W	#0,BPLCON1	; RESET REGISTER
+	
+	.dontSkip:
+	CMP.W	#$2F00,D2		; 12.032
+	BNE.S	.waitNextRaster
+	MOVE.W	#0,BPLCON1	; RESET REGISTER
 	RTS
 
 __BLK_0:	RTS
@@ -406,7 +411,7 @@ DUMMYINDEX:	DC.W PIXELSIDE_W+1
 FRAMESINDEX:	DC.W TXT_FRMSKIP
 
 FONT:		DC.L 0,0		; SPACE CHAR
-		INCBIN "c_font_leftpadding.raw",0
+		INCBIN "c_font_leftpadding2.raw",0
 		EVEN
 TEXT:		INCLUDE "textscroller.i"
 
@@ -423,12 +428,12 @@ COPPER:
 	DC.W $92,$38	; Standard bitplane dma fetch start
 	DC.W $94,$D0	; and stop for standard screen.
 	DC.W $106,$0C00	; (AGA compat. if any Dual Playf. mode)
-	DC.W $108,0	; BPL1MOD	 Bitplane modulo (odd planes)
-	DC.W $10A,0	; BPL2MOD Bitplane modulo (even planes)
+	DC.W $108,4	; BPL1MOD	 Bitplane modulo (odd planes)
+	DC.W $10A,4	; BPL2MOD Bitplane modulo (even planes)
 	DC.W $102,0	; SCROLL REGISTER (AND PLAYFIELD PRI)
 
 	.Palette:
-	DC.W $0180,$0111,$0182,$0333,$0184,$0777,$0186,$0BBB
+	DC.W $0180,$0111,$0182,$0443,$0184,$0776,$0186,$0CCB
 	DC.W $0188,$0F11,$018A,$01F1,$018C,$011F,$018E,$0F1F
 	DC.W $0190,$0111,$0192,$0111,$0194,$0111,$0196,$0111
 	DC.W $0198,$0F11,$019A,$0F11,$019C,$0F11,$019E,$0F11
@@ -508,14 +513,13 @@ COPPER:
 	SECTION ChipBuffers,BSS_C	;BSS doesn't count toward exe size
 ;*******************************************************************************
 
+CHAR_BUFFER:	DS.B 8
+CHAR_ROTATION:	DS.B 8
 BLEEDTOP:		DS.B bypl
 BGNOISE1:		DS.B 50*bypl
 BGNOISE2:		DS.B 50*bypl
 BGPLANE2:		DS.B he*bypl
-BGEMPTY:		DS.B he*bypl
 BGMASK:		DS.B he*bypl
+BGEMPTY:		DS.B he*bypl
 BGFILLED:		DS.B he*bypl
-		DS.B 8
-CHAR_BUFFER:	DS.B 8
-CHAR_ROTATION:	DS.B 8
 END
