@@ -1,9 +1,11 @@
 ;*** CODE: KONEY ***
 ;*** MiniStartup by Photon ***
 	INCDIR	"NAS:AMIGA/CODE/rusteater_amiga/"
-	SECTION	"Code+PT12",CODE
+	SECTION	"Code",CODE
 	INCLUDE	"PhotonsMiniWrapper1.04!.s"
 	INCLUDE	"custom-registers.i"	;use if you like ;)
+	INCLUDE	"med/med_feature_control.i"	; MED CFGs
+	INCLUDE	"med/MED_PlayRoutine.i"
 ;********** Constants **********
 wi		EQU 320+32
 he		EQU 256		; screen height
@@ -77,10 +79,13 @@ Demo:			;a4=VBR, a6=Custom Registers Base addr
 	MOVE.L	#-1,(A1)+		; FILL THE PIXEL
 	DBRA	D0,.loop
 
-	_PushColorsDown	BG_COLS_TBL,#$0
+	_PushColorsDown	BG_COLS_TBL,#16
 	MOVE.L	BGNOISE1,D7
 	; #### CPU INTENSIVE TASKS BEFORE STARTING MUSIC
 
+	; in photon's wrapper comment:;move.w d2,$9a(a6) ;INTENA
+	;MOVE.W	#2,MED_START_POS	 ; skip to pos# after first block
+	JSR	_startmusic
 	MOVE.L	#COPPER,COP1LC
 ;********************  main loop  ********************
 MainLoop:
@@ -131,7 +136,7 @@ MainLoop:
 	BRA.S	.on
 	.off:
 	LEA	BGFILLED,A4
-	BSR.W	__BLIT_PIXEL_TEXTURED
+	BSR.W	__BLIT_PIXEL	;_TEXTURED
 	.on:
 
 	ADD.L	#bypl*PIXELSIDE_H,A5
@@ -166,6 +171,10 @@ MainLoop:
 	BNE.W	MainLoop		; then loop
 	;*--- exit ---*
 	.exit:
+	; ---  quit MED code  ---
+	MOVEM.L	D0-A6,-(SP)
+	JSR	_endmusic
+	MOVEM.L	(SP)+,D0-A6
 	RTS
 
 ;********** Demo Routines **********
@@ -219,7 +228,6 @@ __RANDOMIZE_PLANE:
 	.skip:
 	LEA	2(A4),A4
 	DBRA	D4,.innerloop
-	;MOVE.W	#$0000,$DFF180	; show rastertime left down to $12c
 	RTS
 
 	_RandomWord:
@@ -434,6 +442,12 @@ TEXTINDEX:	DC.W 0
 LINEINDEX:	DC.W 0
 DUMMYINDEX:	DC.W PIXELSIDE_W+1
 FRAMESINDEX:	DC.W TXT_FRMSKIP
+MED_SONG_POS:	DC.W 0		; Well the position...
+MED_BLOCK_LINE:	DC.W 0		; Line of block
+AUDIOCHLEV_0:	DC.W 0
+AUDIOCHLEV_1:	DC.W 0
+AUDIOCHLEV_2:	DC.W 0
+AUDIOCHLEV_3:	DC.W 0
 
 FONT:		DC.L 0,0		; SPACE CHAR
 		INCBIN "c_font_leftpadding2.raw",0
@@ -461,8 +475,9 @@ BG_COLS_TBL:	DC.W $0000,$0000,$0000,$0000
 ;*******************************************************************************
 	SECTION	ChipData,DATA_C	;declared data that must be in chipmem
 ;*******************************************************************************
-
-	; INCLUDES HERE
+MED_MODULE:	INCBIN "med/RustEater_2022_FIX2.med"
+_chipzero:	DC.L 0
+_MED_MODULE:
 
 COPPER:
 	DC.W $1FC,0	; Slow fetch mode, remove if AGA demo.

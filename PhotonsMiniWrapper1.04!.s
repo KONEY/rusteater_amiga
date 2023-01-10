@@ -29,7 +29,7 @@ Start:
 	lea	$dff000,a6
 	bsr.w	WaitEOF		;wait out the current frame
 	move.l	$1c(a6),-(sp)	;save intena+intreq
-	move.w	2(a6),-(sp)		;and dma
+	move.w	2(a6),-(sp)	;and dma
 	move.l	$6c(a4),-(sp)	;and also the VB int vector for sport.
 	bsr.w	AllOff		;turn off all interrupts+DMA
 
@@ -75,7 +75,6 @@ Start:
 	dc.b	"graphics.library",0,0
 
 WaitEOF:				;wait for end of frame
-	;RTS
 	bsr.s	WaitBlitter
 	move.w	#$138,d0
 WaitRaster:			;Wait for scanline d0. Trashes d1.
@@ -90,7 +89,7 @@ WaitRaster:			;Wait for scanline d0. Trashes d1.
 AllOff:	
 	move.w	#$7fff,d2		;clear all bits
 	move.w	d2,DMACON		;in DMACON,
-	move.w	d2,INTENA		;INTENA,	; DONT RESET FOR MED PLAYER
+	;move.w	d2,INTENA		;INTENA,	; DONT RESET FOR MED PLAYER
 IntReqD2:
 	move.w	d2,INTREQ		;and INTREQ
 	move.w	d2,INTREQ		;twice for A4000 compatibility
