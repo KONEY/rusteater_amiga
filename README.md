@@ -16,3 +16,4 @@ Fix music!
 Second frame strobo
 add DITHER plane
 Check slow-downs
+Test color changes on noise

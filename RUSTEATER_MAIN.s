@@ -71,6 +71,10 @@ Demo:			;a4=VBR, a6=Custom Registers Base addr
 	BSR.W	PokePtrs
 
 	; #### CPU INTENSIVE TASKS BEFORE STARTING MUSIC
+	LEA	DITHERPLANE,A4		; FILLS A PLANE
+	MOVE.W	#0,D0
+	BSR.W	__DITHER_PLANE
+
 	LEA	BGMASK,A0
 	LEA	BGFILLED,A1
 	MOVE.W	#bypl*he/4-1,D0
@@ -84,7 +88,7 @@ Demo:			;a4=VBR, a6=Custom Registers Base addr
 	; #### CPU INTENSIVE TASKS BEFORE STARTING MUSIC
 
 	; in photon's wrapper comment:;move.w d2,$9a(a6) ;INTENA
-	;MOVE.W	#17,MED_START_POS	 ; skip to pos# after first block
+	;MOVE.W	#14,MED_START_POS	 ; skip to pos# after first block
 	JSR	_startmusic
 	MOVE.L	#COPPER,COP1LC
 ;********************  main loop  ********************
@@ -141,7 +145,7 @@ MainLoop:
 	BRA.S	.on
 	.off:
 	LEA	BGFILLED,A4
-	BSR.W	__BLIT_PIXEL	;_TEXTURED
+	BSR.W	__BLIT_PIXEL
 	.on:
 
 	ADD.L	#bypl*PIXELSIDE_H,A5
@@ -442,6 +446,23 @@ __HW_DISPLACE:
 	MOVE.W	#0,BPLCON1	; RESET REGISTER
 	RTS
 
+__DITHER_PLANE:
+	MOVE.L	A4,A4
+	MOVE.W	#he-1,D4		; QUANTE LINEE
+	MOVE.L	#$AAAAAAAA,D5
+	.outerloop:		; NUOVA RIGA
+	MOVE.W	#(bypl/4)-1,D6	; RESET D6
+	NOT.L	D5
+	.innerloop:		; LOOP KE CICLA LA BITMAP
+	MOVE.L	D5,(A4)+
+	DBRA	D6,.innerloop
+	TST.W	D0
+	BEQ.S	.noWait
+	BSR.W	WaitEOF		; TO SLOW DOWN :)
+	.noWait:
+	DBRA	D4,.outerloop
+	RTS
+
 __BLK_0:	RTS
 
 ;********** Fastmem Data **********
@@ -570,7 +591,7 @@ CHAR_ROTATION:	DS.B 8
 BLEEDTOP:		DS.B bypl
 BGNOISE1:		DS.B 50*bypl
 BGNOISE2:		DS.B 50*bypl
-BGPLANE2:		DS.B he*bypl
+DITHERPLANE:	DS.B he*bypl
 BGMASK:		DS.B he*bypl
 BGEMPTY:		DS.B he*bypl
 BGFILLED:		DS.B he*bypl
