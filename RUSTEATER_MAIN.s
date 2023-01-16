@@ -3,7 +3,7 @@
 	INCDIR	"NAS:AMIGA/CODE/rusteater_amiga/"
 	SECTION	"Code",CODE
 	INCLUDE	"PhotonsMiniWrapper1.04!.s"
-	INCLUDE	"custom-registers.i"	;use if you like ;)
+	INCLUDE	"custom-registers.i"
 	INCLUDE	"med/med_feature_control.i"	; MED CFGs
 	INCLUDE	"med/MED_PlayRoutine.i"
 ;********** Constants **********
@@ -84,7 +84,7 @@ Demo:			;a4=VBR, a6=Custom Registers Base addr
 	; #### CPU INTENSIVE TASKS BEFORE STARTING MUSIC
 
 	; in photon's wrapper comment:;move.w d2,$9a(a6) ;INTENA
-	;MOVE.W	#2,MED_START_POS	 ; skip to pos# after first block
+	;MOVE.W	#17,MED_START_POS	 ; skip to pos# after first block
 	JSR	_startmusic
 	MOVE.L	#COPPER,COP1LC
 ;********************  main loop  ********************
@@ -161,7 +161,7 @@ MainLoop:
 	;MOVE.W	#$0F0F,$DFF180	; show rastertime left down to $12c
 	BTST	#$4,INTENAR+1
 	BNE.S	.WaitRasterCopper
-	;MOVE.W	#$0F00,$DFF180	; show rastertime left down to $12c
+	;MOVE.W	#$0000,$DFF180	; show rastertime left down to $12c
 	MOVE.W	#$8010,INTENA
 
 	;*--- main loop end ---*

@@ -12,3 +12,6 @@ Find good random values and make a table
 Precalc rotations
 #Blit with texture
 Fix music!
+Reduce SPACE pixel
+Second frame strobo
+add DITHER plane
