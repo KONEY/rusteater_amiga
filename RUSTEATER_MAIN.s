@@ -90,15 +90,20 @@ Demo:			;a4=VBR, a6=Custom Registers Base addr
 ;********************  main loop  ********************
 MainLoop:
 	; do stuff here :)
+	ADDQ.W	#1,MED_TRK_0_COUNT	; inc elapsed #calls since last
+	ADDQ.W	#1,MED_TRK_1_COUNT
+	ADDQ.W	#1,MED_TRK_2_COUNT
+	ADDQ.W	#1,MED_TRK_3_COUNT
 	; ## NOISE SECTION ##
 	TST.B	FRAME_STROBE
 	BNE.W	.oddFrame
 	MOVE.B	#1,FRAME_STROBE
 
-	;MOVE.W	DUMMYINDEX,D1
-	;LSR.W	D1
-	;LSL.W	#$4,D1
-	;_PushColorsDown	BG_COLS_TBL,D1
+	CLR.L	D1
+	MOVE.B	MED_TRK_1_INST,D1
+	LSR.W	D1
+	LSL.W	#$4,D1
+	_PushColorsDown	BG_COLS_TBL,D1
 
 	MOVE.W	#(bypl/2)*50-1,D4
 	LEA	BGNOISE1,A4
@@ -235,7 +240,9 @@ __RANDOMIZE_PLANE:
 	ROL.W	#$8,D5
 	_RandomByte:
 	MOVE.B	$DFF007,D5	;$dff00a $dff00b for mouse pos
-	MOVE.B	$BFD800,D3
+	;MOVE.W	MED_TRK_2_COUNT,D5
+	;MOVE.B	$BFD800,D3
+	MOVE.W	MED_TRK_2_COUNT,D3
 	EOR.B	D3,D5
 	RTS
 
