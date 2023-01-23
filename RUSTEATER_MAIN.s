@@ -40,7 +40,7 @@ Demo:			;a4=VBR, a6=Custom Registers Base addr
 	LEA	BGEMPTY,A0
 	LEA	COPPER\.BplPtrs+8,A1
 	BSR.W	PokePtrs
-	LEA	BGEMPTY,A0
+	LEA	DITHERPLANE,A0
 	LEA	COPPER\.BplPtrs+16,A1
 	BSR.W	PokePtrs
 	LEA	BGFILLED,A0
@@ -84,7 +84,7 @@ Demo:			;a4=VBR, a6=Custom Registers Base addr
 	DBRA	D0,.loop
 
 	_PushColorsDown	BG_COLS_TBL,#16
-	MOVE.L	BGNOISE1,D7
+	CLR.L	D7
 	; #### CPU INTENSIVE TASKS BEFORE STARTING MUSIC
 
 	; in photon's wrapper comment:;move.w d2,$9a(a6) ;INTENA
@@ -93,24 +93,25 @@ Demo:			;a4=VBR, a6=Custom Registers Base addr
 	MOVE.L	#COPPER,COP1LC
 ;********************  main loop  ********************
 MainLoop:
+	MOVE.W	AUDIOCHLEV_3,D1
+	LSR.W	D1
+	LSL.W	#$4,D1
+	_PushColorsDown	BG_COLS_TBL,D1
+
 	; do stuff here :)
-	ADDQ.W	#1,MED_TRK_0_COUNT	; inc elapsed #calls since last
-	ADDQ.W	#1,MED_TRK_1_COUNT
-	ADDQ.W	#1,MED_TRK_2_COUNT
-	ADDQ.W	#1,MED_TRK_3_COUNT
+	BSR.W	__SET_MED_VALUES
+
+	MOVE.W	MED_TRK_1_INST,D7
+
 	; ## NOISE SECTION ##
 	TST.B	FRAME_STROBE
 	BNE.W	.oddFrame
 	MOVE.B	#1,FRAME_STROBE
 
-	CLR.L	D1
-	MOVE.B	MED_TRK_1_INST,D1
-	LSR.W	D1
-	LSL.W	#$4,D1
-	_PushColorsDown	BG_COLS_TBL,D1
-
 	MOVE.W	#(bypl/2)*50-1,D4
 	LEA	BGNOISE1,A4
+	BSR.W	__RandomWord
+	;MOVE.W	AUDIOCHLEV_1,D3
 	BSR.W	__RANDOMIZE_PLANE
 
 	BRA.W	.evenFrame
@@ -119,7 +120,11 @@ MainLoop:
 
 	MOVE.W	#(bypl/2)*50-1,D4
 	LEA	BGNOISE2,A4
+	BSR.W	__RandomWord
+	;MOVE.W	AUDIOCHLEV_1,D3
+	;MOVE.W	AUDIOCHLEV_2,D3
 	BSR.W	__RANDOMIZE_PLANE
+
 	.evenFrame:
 	; ## NOISE SECTION ##
 
@@ -214,8 +219,30 @@ VBint:				; Blank template VERTB interrupt
 	movem.l	(sp)+,d0/a6	; restore
 	rte
 
+__SET_MED_VALUES:
+	MOVE.W	MED_STEPSEQ_POS,D0		; UPDATE STEPSEQUENCER
+	ANDI.W	#$F,D0			; POSITION (0-15 = 16 LEDS)
+	MOVE.W	D0,MED_STEPSEQ_POS
+
+	LEA	MED_TRK_0_COUNT(PC),A0
+	LEA	AUDIOCHLEV_0(PC),A2
+	LEA	MED_TRK_0_INST(PC),A3
+	MOVEQ	#$3,D1
+	.loop:
+	MOVEQ	#$F,D0			; maxvalue
+	SUB.W	(A0)+,D0			; -#frames/irqs since instrument trigger
+	BPL.S	.ok			; below minvalue?
+	MOVEQ	#$0,D0			; then set to minvalue
+	MOVE.W	D0,(A3)			; RESET TWO BYTES (INST+NOTE)
+	.ok:
+	MOVE.W	D0,(A2)+			; LEVEL VALUE TO USE IN CODE
+	LEA	2(A3),A3
+	DBF	D1,.loop
+	ADD.L	#$10001,MED_TRK_0_COUNT	; inc elapsed #calls since last
+	ADD.L	#$10001,MED_TRK_2_COUNT	; use LONG to save 8 cycles
+	RTS
+
 __RANDOMIZE_PLANE:
-	BSR.S	_RandomWord
 	SWAP	D5
 	MOVE.W	D7,D5
 	MOVE.L	D5,D1
@@ -239,14 +266,14 @@ __RANDOMIZE_PLANE:
 	DBRA	D4,.innerloop
 	RTS
 
-	_RandomWord:
-	BSR	_RandomByte
+__RandomWord:
+	BSR	._RandomByte
 	ROL.W	#$8,D5
-	_RandomByte:
+	._RandomByte:
 	MOVE.B	$DFF007,D5	;$dff00a $dff00b for mouse pos
-	;MOVE.W	MED_TRK_2_COUNT,D5
-	;MOVE.B	$BFD800,D3
-	MOVE.W	MED_TRK_2_COUNT,D3
+	;MOVE.W	MED_TRK_3_COUNT,D5	; AUDIOCHLEV_0
+	MOVE.B	$BFD800,D3
+	;MOVE.W	MED_TRK_1_INST,D3
 	EOR.B	D3,D5
 	RTS
 
@@ -288,7 +315,7 @@ __RANDOMIZE_PLANE_V1:
 	RTS
 
 	_RandomWord1:
-	BSR	_RandomByte
+	BSR	_RandomByte1
 	ROL.W	#8,D5
 	_RandomByte1:
 	MOVE.B	$DFF007,D5	;$dff00a $dff00b for mouse pos
@@ -524,9 +551,9 @@ COPPER:
 	.Palette:
 	;DC.W $0180,$0111,
 	DC.W $0182,$0443,$0184,$0776,$0186,$0CCB
-	DC.W $0188,$0F11,$018A,$01F1,$018C,$011F,$018E,$0F1F
+	DC.W $0188,$0111,$018A,$0777,$018C,$0555,$018E,$0AA9
 	;DC.W $0190,$0111,$0192,$0111,$0194,$0111,$0196,$0111
-	DC.W $0198,$0F11,$019A,$0F11,$019C,$0F11,$019E,$0F11
+	DC.W $0198,$0111,$019A,$0111,$019C,$0111,$019E,$0111
 	DC.W $01A0,$0F11,$01A2,$0F11,$01A4,$0F11,$01A6,$0F11
 	DC.W $01A8,$0F11,$01AA,$0F11,$01AC,$0F11,$01AE,$0F11
 
