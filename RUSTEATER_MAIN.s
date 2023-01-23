@@ -71,8 +71,7 @@ Demo:			;a4=VBR, a6=Custom Registers Base addr
 	BSR.W	PokePtrs
 
 	; #### CPU INTENSIVE TASKS BEFORE STARTING MUSIC
-	LEA	DITHERPLANE,A4		; FILLS A PLANE
-	MOVE.W	#0,D0
+	LEA	DITHERPLANE,A4	; FILLS A PLANE
 	BSR.W	__DITHER_PLANE
 
 	LEA	BGMASK,A0
@@ -97,6 +96,10 @@ MainLoop:
 	LSR.W	D1
 	LSL.W	#$4,D1
 	_PushColorsDown	BG_COLS_TBL,D1
+
+	MOVE.W	AUDIOCHLEV_2,D1
+	ADD.W	#$4,D1
+	MOVE.W	D1,COPPER\.OddMod+2
 
 	; do stuff here :)
 	BSR.W	__SET_MED_VALUES
@@ -474,19 +477,20 @@ __HW_DISPLACE:
 	RTS
 
 __DITHER_PLANE:
-	MOVE.L	A4,A4
+	MOVE.L	#$A5A5A5A5,D5
+	BSR.W	__RandomWord
 	MOVE.W	#he-1,D4		; QUANTE LINEE
-	MOVE.L	#$AAAAAAAA,D5
 	.outerloop:		; NUOVA RIGA
-	MOVE.W	#(bypl/4)-1,D6	; RESET D6
 	NOT.L	D5
+	MOVE.W	#(bypl/4)-1,D6	; RESET D6
 	.innerloop:		; LOOP KE CICLA LA BITMAP
 	MOVE.L	D5,(A4)+
 	DBRA	D6,.innerloop
-	TST.W	D0
-	BEQ.S	.noWait
-	BSR.W	WaitEOF		; TO SLOW DOWN :)
-	.noWait:
+	ROR.L	D5
+	CMP.B	D3,D4
+	BGE.S	.skip
+	ROR.L	D5
+	.skip:
 	DBRA	D4,.outerloop
 	RTS
 
@@ -544,7 +548,9 @@ COPPER:
 	DC.W $92,$38	; Standard bitplane dma fetch start
 	DC.W $94,$D0	; and stop for standard screen.
 	DC.W $106,$0C00	; (AGA compat. if any Dual Playf. mode)
+	.OddMod:
 	DC.W $108,4	; BPL1MOD	 Bitplane modulo (odd planes)
+	.EvenMod:
 	DC.W $10A,4	; BPL2MOD Bitplane modulo (even planes)
 	DC.W $102,0	; SCROLL REGISTER (AND PLAYFIELD PRI)
 
