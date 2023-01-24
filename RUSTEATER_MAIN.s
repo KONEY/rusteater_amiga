@@ -55,11 +55,10 @@ Demo:			;a4=VBR, a6=Custom Registers Base addr
 	LEA	COPPER\.BplPtrs2+8,A1
 	BSR.W	PokePtrs
 	LEA	BGNOISE1,A0
-	LEA	-40(A0),A0
 	LEA	COPPER\.BplPtrs4,A1
 	BSR.W	PokePtrs
 	LEA	BGNOISE1,A0
-	LEA	4(A0),A0
+	LEA	2(A0),A0
 	LEA	COPPER\.BplPtrs4+8,A1
 	BSR.W	PokePtrs
 	; # NOISE AREA ##
@@ -87,24 +86,44 @@ Demo:			;a4=VBR, a6=Custom Registers Base addr
 	; #### CPU INTENSIVE TASKS BEFORE STARTING MUSIC
 
 	; in photon's wrapper comment:;move.w d2,$9a(a6) ;INTENA
-	;MOVE.W	#14,MED_START_POS	 ; skip to pos# after first block
+	MOVE.W	#27,MED_START_POS		; skip to pos# after first block
 	JSR	_startmusic
 	MOVE.L	#COPPER,COP1LC
 ;********************  main loop  ********************
 MainLoop:
-	MOVE.W	AUDIOCHLEV_3,D1
-	LSR.W	D1
-	LSL.W	#$4,D1
-	_PushColorsDown	BG_COLS_TBL,D1
-
-	MOVE.W	AUDIOCHLEV_2,D1
-	ADD.W	#$4,D1
-	MOVE.W	D1,COPPER\.OddMod+2
-
 	; do stuff here :)
 	BSR.W	__SET_MED_VALUES
 
-	MOVE.W	MED_TRK_1_INST,D7
+	MOVE.W	AUDIOCHLEV_1,D1
+	;MOVE.W	#$0,D1
+	LSR.W	#2,D1
+	LSL.W	#$4,D1
+	_PushColorsDown	BG_COLS_TBL,D1
+
+	MOVE.B	MED_TRK_3_INST,D0		; ALSO 4 + "E"
+	;CLR.W	$100			; DEBUG | w 0 100 2
+	CMP.B	#$7,D0
+	BNE.S	.not7
+	SUB.W	#$1,COPPER\.OddMod+2
+	.not7:
+	CMP.B	#$2,D0
+	BNE.S	.not2
+	ADD.W	#$1,COPPER\.OddMod+2
+	.not2:
+	CMP.B	#$8,D0
+	BNE.S	.not8
+	MOVE.W	#$4,COPPER\.OddMod+2
+	.not8:
+
+	;MOVE.W	AUDIOCHLEV_3,D1
+	;LSL.W	D1
+	;ADD.B	D1,COPPER\.BplPtrs4-4
+
+
+	;MOVE.W	MED_BLOCK_LINE,D7
+	BSR.W	__RandomWord
+	MOVE.W	MED_TRK_1_INST,D5
+	MOVE.W	MED_TRK_3_COUNT,D7
 
 	; ## NOISE SECTION ##
 	TST.B	FRAME_STROBE
@@ -113,7 +132,7 @@ MainLoop:
 
 	MOVE.W	#(bypl/2)*50-1,D4
 	LEA	BGNOISE1,A4
-	BSR.W	__RandomWord
+	;BSR.W	__RandomWord
 	;MOVE.W	AUDIOCHLEV_1,D3
 	BSR.W	__RANDOMIZE_PLANE
 
@@ -123,8 +142,7 @@ MainLoop:
 
 	MOVE.W	#(bypl/2)*50-1,D4
 	LEA	BGNOISE2,A4
-	BSR.W	__RandomWord
-	;MOVE.W	AUDIOCHLEV_1,D3
+	;BSR.W	__RandomWord
 	;MOVE.W	AUDIOCHLEV_2,D3
 	BSR.W	__RANDOMIZE_PLANE
 
@@ -479,7 +497,7 @@ __HW_DISPLACE:
 __DITHER_PLANE:
 	MOVE.L	#$A5A5A5A5,D5
 	BSR.W	__RandomWord
-	MOVE.W	#he-1,D4		; QUANTE LINEE
+	MOVE.W	#he*3-1,D4	; QUANTE LINEE
 	.outerloop:		; NUOVA RIGA
 	NOT.L	D5
 	MOVE.W	#(bypl/4)-1,D6	; RESET D6
@@ -487,10 +505,6 @@ __DITHER_PLANE:
 	MOVE.L	D5,(A4)+
 	DBRA	D6,.innerloop
 	ROR.L	D5
-	CMP.B	D3,D4
-	BGE.S	.skip
-	ROR.L	D5
-	.skip:
 	DBRA	D4,.outerloop
 	RTS
 
@@ -552,16 +566,19 @@ COPPER:
 	DC.W $108,4	; BPL1MOD	 Bitplane modulo (odd planes)
 	.EvenMod:
 	DC.W $10A,4	; BPL2MOD Bitplane modulo (even planes)
-	DC.W $102,0	; SCROLL REGISTER (AND PLAYFIELD PRI)
+	;.OddScroll:
+	;DC.W $102,0	; SCROLL REGISTER (AND PLAYFIELD PRI)
 
 	.Palette:
-	;DC.W $0180,$0111,
+	;DC.W $0180,$0111
 	DC.W $0182,$0443,$0184,$0776,$0186,$0CCB
 	DC.W $0188,$0111,$018A,$0777,$018C,$0555,$018E,$0AA9
 	;DC.W $0190,$0111,$0192,$0111,$0194,$0111,$0196,$0111
 	DC.W $0198,$0111,$019A,$0111,$019C,$0111,$019E,$0111
-	DC.W $01A0,$0F11,$01A2,$0F11,$01A4,$0F11,$01A6,$0F11
-	DC.W $01A8,$0F11,$01AA,$0F11,$01AC,$0F11,$01AE,$0F11
+	DC.W $01A0,$0111,$01A2,$0222,$01A4,$0111,$01A6,$0665
+	DC.W $01A8,$0111,$01AA,$0666,$01AC,$0111,$01AE,$0111
+	DC.W $01B0,$0110,$01B2,$0223,$01B4,$0221,$01B6,$0122
+	DC.W $01B8,$0332,$01BA,$0222,$01BC,$0444,$01BE,$0221
 
 	.SpritePointers:
 	DC.W $0120,0,$122,0	; 0
@@ -599,7 +616,7 @@ COPPER:
 	.BplPtrs3:
 	DC.W $EC,0
 	DC.W $EE,0
-	DC.W $9001,$FF00		; ## START ##
+	DC.W $9A01,$FF00		; ## START ##
 	.BplPtrs4:
 	DC.W $E0,0
 	DC.W $E2,0
@@ -624,7 +641,7 @@ CHAR_ROTATION:	DS.B 8
 BLEEDTOP:		DS.B bypl
 BGNOISE1:		DS.B 50*bypl
 BGNOISE2:		DS.B 50*bypl
-DITHERPLANE:	DS.B he*bypl
+DITHERPLANE:	DS.B he*bypl*3
 BGMASK:		DS.B he*bypl
 BGEMPTY:		DS.B he*bypl
 BGFILLED:		DS.B he*bypl
