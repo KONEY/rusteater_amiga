@@ -71,6 +71,12 @@ Demo:			;a4=VBR, a6=Custom Registers Base addr
 
 	; #### CPU INTENSIVE TASKS BEFORE STARTING MUSIC
 	LEA	DITHERPLANE,A4	; FILLS A PLANE
+	MOVE.L	#$AAAAAAAA,D5	; PARAMS
+	;BSR.W	__RandomWord	; PARS
+	;ROR.L	D3,D5		; PARS
+	BSR.W	__DITHER_PLANE
+	BSR.W	__DITHER_PLANE
+	BSR.W	__DITHER_PLANE
 	BSR.W	__DITHER_PLANE
 
 	LEA	BGMASK,A0
@@ -86,7 +92,7 @@ Demo:			;a4=VBR, a6=Custom Registers Base addr
 	; #### CPU INTENSIVE TASKS BEFORE STARTING MUSIC
 
 	; in photon's wrapper comment:;move.w d2,$9a(a6) ;INTENA
-	MOVE.W	#27,MED_START_POS		; skip to pos# after first block
+	MOVE.W	#27,MED_START_POS	; skip to pos# after first block
 	JSR	_startmusic
 	MOVE.L	#COPPER,COP1LC
 ;********************  main loop  ********************
@@ -100,25 +106,43 @@ MainLoop:
 	LSL.W	#$4,D1
 	_PushColorsDown	BG_COLS_TBL,D1
 
-	MOVE.B	MED_TRK_3_INST,D0		; ALSO 4 + "E"
-	;CLR.W	$100			; DEBUG | w 0 100 2
+	MOVE.B	MED_TRK_3_INST,D0	; ALSO 4 + "E"
 	CMP.B	#$7,D0
 	BNE.S	.not7
-	SUB.W	#$1,COPPER\.OddMod+2
+	MOVE.W	AUDIOCHLEV_3,COPPER\.OddMod+2
+
+	LEA	DITHERPLANE,A4	; FILLS A PLANE
+	LSL.W	#$4,D1
+	LSL.W	#$4,D1
+	ADD.L	D1,A4
+	MOVE.L	#$A5A5A5A5,D5	; PARAMS
+	BSR.W	__RandomWord	; PARS
+	ROR.L	D3,D5		; PARS
+	BSR.W	__TEXTURIZE_PLANE
+	BRA.W	.evenFrame
+
 	.not7:
 	CMP.B	#$2,D0
 	BNE.S	.not2
-	ADD.W	#$1,COPPER\.OddMod+2
+	SUB.W	#$1,COPPER\.OddMod+2
 	.not2:
 	CMP.B	#$8,D0
 	BNE.S	.not8
 	MOVE.W	#$4,COPPER\.OddMod+2
 	.not8:
 
+	;MOVE.B	MED_TRK_1_INST,D0	; ALSO 4 + "E"
+	;CMP.B	#$4,D0
+	;BNE.S	.not4
+	;ADD.W	#$1,COPPER\.EvenMod+2
+	;BRA.S	.reset
+	;.not4:
+	;MOVE.W	#$4,COPPER\.EvenMod+2
+	;.reset:
+
 	;MOVE.W	AUDIOCHLEV_3,D1
 	;LSL.W	D1
 	;ADD.B	D1,COPPER\.BplPtrs4-4
-
 
 	;MOVE.W	MED_BLOCK_LINE,D7
 	BSR.W	__RandomWord
@@ -155,7 +179,7 @@ MainLoop:
 
 	;BTST	#6,$BFE001	; POTINP - LMB pressed?
 	;BNE.W	.dontScroll
-	.dontScroll:
+	;.dontScroll:
 
 	; ## MASKING SECTION ##
 	LEA	BGMASK+bypl-PIXELSIDE_W/16*2,A5
@@ -494,10 +518,8 @@ __HW_DISPLACE:
 	MOVE.W	#0,BPLCON1	; RESET REGISTER
 	RTS
 
-__DITHER_PLANE:
-	MOVE.L	#$A5A5A5A5,D5
-	BSR.W	__RandomWord
-	MOVE.W	#he*3-1,D4	; QUANTE LINEE
+__TEXTURIZE_PLANE:
+	MOVE.W	#he/4-1,D4	; QUANTE LINEE
 	.outerloop:		; NUOVA RIGA
 	NOT.L	D5
 	MOVE.W	#(bypl/4)-1,D6	; RESET D6
@@ -505,6 +527,17 @@ __DITHER_PLANE:
 	MOVE.L	D5,(A4)+
 	DBRA	D6,.innerloop
 	ROR.L	D5
+	DBRA	D4,.outerloop
+	RTS
+
+__DITHER_PLANE:
+	MOVE.W	#he/4-1,D4	; QUANTE LINEE
+	.outerloop:		; NUOVA RIGA
+	NOT.L	D5
+	MOVE.W	#(bypl/4)-1,D6	; RESET D6
+	.innerloop:		; LOOP KE CICLA LA BITMAP
+	MOVE.L	D5,(A4)+
+	DBRA	D6,.innerloop
 	DBRA	D4,.outerloop
 	RTS
 
@@ -570,7 +603,7 @@ COPPER:
 	;DC.W $102,0	; SCROLL REGISTER (AND PLAYFIELD PRI)
 
 	.Palette:
-	;DC.W $0180,$0111
+	;DC.W $0180,$0000
 	DC.W $0182,$0443,$0184,$0776,$0186,$0CCB
 	DC.W $0188,$0111,$018A,$0777,$018C,$0555,$018E,$0AA9
 	;DC.W $0190,$0111,$0192,$0111,$0194,$0111,$0196,$0111
