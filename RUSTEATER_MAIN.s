@@ -32,6 +32,7 @@ Demo:			;a4=VBR, a6=Custom Registers Base addr
 	MOVE.L	#VBint,$6C(A4)
 	MOVE.W	#%1110000000100000,INTENA
 	MOVE.W	#%1000001111100000,DMACON
+	;BSET	#10,BPLCON0
 	;*--- start copper ---*
 	; ## EMPTY AREA ##
 	LEA	BGEMPTY,A0
@@ -45,6 +46,10 @@ Demo:			;a4=VBR, a6=Custom Registers Base addr
 	BSR.W	PokePtrs
 	LEA	BGFILLED,A0
 	LEA	COPPER\.BplPtrs+24,A1
+	BSR.W	PokePtrs
+	LEA	DITHERPLANE,A0
+	LEA	44(A0),A0
+	LEA	COPPER\.BplPtrs+32,A1
 	BSR.W	PokePtrs
 	; # NOISE AREA ##
 	LEA	BGNOISE1,A0
@@ -65,19 +70,25 @@ Demo:			;a4=VBR, a6=Custom Registers Base addr
 	LEA	BGMASK,A0
 	LEA	COPPER\.BplPtrs3,A1
 	BSR.W	PokePtrs
-	LEA	BGFILLED,A0
+	LEA	BGEMPTY,A0
 	LEA	COPPER\.BplPtrs5,A1
+	BSR.W	PokePtrs
+	LEA	BGEMPTY,A0
+	LEA	COPPER\.BplPtrs5+8,A1
+	BSR.W	PokePtrs
+	LEA	BGFILLED,A0
+	LEA	COPPER\.BplPtrs5+16,A1
 	BSR.W	PokePtrs
 
 	; #### CPU INTENSIVE TASKS BEFORE STARTING MUSIC
 	LEA	DITHERPLANE,A4	; FILLS A PLANE
-	MOVE.L	#$AAAAAAAA,D5	; PARAMS
-	;BSR.W	__RandomWord	; PARS
-	;ROR.L	D3,D5		; PARS
-	BSR.W	__DITHER_PLANE
-	BSR.W	__DITHER_PLANE
-	BSR.W	__DITHER_PLANE
-	BSR.W	__DITHER_PLANE
+	MOVE.L	#$A5A5A5A5,D5	; PARAMS
+	BSR.W	__RandomWord	; PARS
+	ROR.L	D3,D5		; PARS
+	BSR.W	__TEXTURIZE_PLANE
+	BSR.W	__TEXTURIZE_PLANE
+	BSR.W	__TEXTURIZE_PLANE
+	BSR.W	__TEXTURIZE_PLANE
 
 	LEA	BGMASK,A0
 	LEA	BGFILLED,A1
@@ -99,6 +110,13 @@ Demo:			;a4=VBR, a6=Custom Registers Base addr
 MainLoop:
 	; do stuff here :)
 	BSR.W	__SET_MED_VALUES
+	.song_blocks_events:
+	;* FOR TIMED EVENTS ON BLOCK ****
+	MOVE.W	MED_SONG_POS,D5
+	LSL.W	#2,D5		; CALCULATES OFFSET (OPTIMIZED)
+	LEA	TIMELINE,A3
+	MOVE.L	(A3,D5),A4	; THANKS HEDGEHOG!!
+	;JSR	(A4)		; EXECUTE SUBROUTINE BLOCK#
 
 	MOVE.W	AUDIOCHLEV_1,D1
 	;MOVE.W	#$0,D1
@@ -111,15 +129,15 @@ MainLoop:
 	BNE.S	.not7
 	MOVE.W	AUDIOCHLEV_3,COPPER\.OddMod+2
 
-	LEA	DITHERPLANE,A4	; FILLS A PLANE
-	LSL.W	#$4,D1
-	LSL.W	#$4,D1
-	ADD.L	D1,A4
-	MOVE.L	#$A5A5A5A5,D5	; PARAMS
-	BSR.W	__RandomWord	; PARS
-	ROR.L	D3,D5		; PARS
-	BSR.W	__TEXTURIZE_PLANE
-	BRA.W	.evenFrame
+	;LEA	DITHERPLANE,A4	; FILLS A PLANE
+	;LSL.W	#$4,D1
+	;LSL.W	#$4,D1
+	;ADD.L	D1,A4
+	;MOVE.L	#$A5A5A5A5,D5	; PARAMS
+	;BSR.W	__RandomWord	; PARS
+	;ROR.L	D3,D5		; PARS
+	;BSR.W	__TEXTURIZE_PLANE
+	;BRA.W	.evenFrame
 
 	.not7:
 	CMP.B	#$2,D0
@@ -169,7 +187,6 @@ MainLoop:
 	;BSR.W	__RandomWord
 	;MOVE.W	AUDIOCHLEV_2,D3
 	BSR.W	__RANDOMIZE_PLANE
-
 	.evenFrame:
 	; ## NOISE SECTION ##
 
@@ -600,7 +617,7 @@ COPPER:
 	.EvenMod:
 	DC.W $10A,4	; BPL2MOD Bitplane modulo (even planes)
 	;.OddScroll:
-	;DC.W $102,0	; SCROLL REGISTER (AND PLAYFIELD PRI)
+	;DC.W $102,$00	; SCROLL REGISTER (AND PLAYFIELD PRI)
 
 	.Palette:
 	;DC.W $0180,$0000
@@ -637,26 +654,31 @@ COPPER:
 	DC.W $F4,0
 	DC.W $F6,0		;full 6 ptrs, in case you increase bpls
 	DC.W $100,bpls*$1000+$200	;enable bitplanes
+	;DC.W $100,bpls*$1000+%011000000000
 
 	.Waits:
-	DC.W $4D01,$FF00		; ## START ##
+	DC.W $4D01,$FF00		; ## START OF NOISE PART ##
 	.BplPtrs2:
 	DC.W $E0,0
 	DC.W $E2,0
 	DC.W $E4,0
 	DC.W $E6,0
-	DC.W $5601,$FF00		; ## START ##
+	DC.W $5601,$FF00		; ## NOISE REPOINTED ONLY ON ONE PLANE ##
 	.BplPtrs3:
 	DC.W $EC,0
 	DC.W $EE,0
-	DC.W $9A01,$FF00		; ## START ##
+	DC.W $9A01,$FF00		; ## NOISE REPOINTED ONLY ON BOTH PLANES ##
 	.BplPtrs4:
 	DC.W $E0,0
 	DC.W $E2,0
 	DC.W $E4,0
 	DC.W $E6,0
-	DC.W $F601,$FF00		; ## START ##
+	DC.W $F601,$FF00		; ## END OF NOISE PART ##
 	.BplPtrs5:
+	DC.W $E0,0
+	DC.W $E2,0
+	DC.W $E4,0
+	DC.W $E6,0
 	DC.W $EC,0
 	DC.W $EE,0
 
