@@ -495,8 +495,36 @@ __BLK_INTRO:
 	LSR.W	#$2,D1
 	LSL.W	#$3,D1
 	_PushColors	BG_COLS_TBL,D1,$DFF190
-	MOVE.W	#$4,D1
+	MOVE.W	#16,D1
 	_PushColors	FG_COLS_TBL,D1,$DFF198
+
+	MOVE.B	MED_TRK_1_INST,D1	; ALSO 4 + "E"
+	CMP.B	#$4,D1
+	BNE.S	.not4
+	MOVE.W	AUDIOCHLEV_1,D1
+	;LSR.W	D1
+	LSL.W	#$2,D1
+	_PushColors	FG_COLS_TBL,D1,$DFF198
+	.not4:
+
+	;MOVE.W	MED_BLOCK_LINE,D7
+	BSR.W	__RandomWord
+	MOVE.W	MED_TRK_1_INST,D5
+	MOVE.W	MED_TRK_3_COUNT,D7
+
+	; ## NOISE SECTION ##
+	MOVE.W	#(bypl/2)*50-1,D4
+	TST.B	FRAME_STROBE
+	BNE.W	.oddFrame
+	MOVE.B	#1,FRAME_STROBE
+	LEA	BGNOISE1,A4
+	BRA.W	.evenFrame
+	.oddFrame:
+	MOVE.B	#0,FRAME_STROBE
+	LEA	BGNOISE2,A4
+	.evenFrame:
+	BSR.W	__RANDOMIZE_PLANE
+	; ## NOISE SECTION ##
 	RTS
 
 __BLK_0:	
@@ -512,8 +540,8 @@ __BLK_0:
 	LSL.W	#$3,D1
 	_PushColors	FG_COLS_TBL,D1,$DFF198
 
-	MOVE.B	MED_TRK_3_INST,D0	; ALSO 4 + "E"
-	CMP.B	#$7,D0
+	MOVE.B	MED_TRK_3_INST,D1	; ALSO 4 + "E"
+	CMP.B	#$7,D1
 	BNE.S	.not7
 	MOVE.W	AUDIOCHLEV_3,COPPER\.OddMod+2
 
@@ -528,11 +556,11 @@ __BLK_0:
 	;BRA.W	.evenFrame
 
 	.not7:
-	CMP.B	#$2,D0
+	CMP.B	#$2,D1
 	BNE.S	.not2
 	SUB.W	#$1,COPPER\.OddMod+2
 	.not2:
-	CMP.B	#$8,D0
+	CMP.B	#$8,D1
 	BNE.S	.not8
 	MOVE.W	#$4,COPPER\.OddMod+2
 	.not8:
@@ -567,7 +595,7 @@ __BLK_0:
 	RTS
 
 ;********** Fastmem Data **********
-TIMELINE:		DC.L __BLK_INTRO,__BLK_0,__BLK_0,__BLK_0
+TIMELINE:		DC.L __BLK_INTRO,__BLK_INTRO,__BLK_0,__BLK_0
 		DC.L __BLK_0,__BLK_0,__BLK_0,__BLK_0
 		DC.L __BLK_0,__BLK_0,__BLK_0,__BLK_0
 		DC.L __BLK_0,__BLK_0,__BLK_0,__BLK_0
