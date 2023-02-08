@@ -21,10 +21,10 @@ _PushColors:	MACRO
 	LEA	\1,A0
 	ADD.W	\2,A0		; FASTER THAN LEA \1+16
 	LEA	\3,A1
-	MOVE.L	(A0),D1
-	MOVE.W	D1,-16(A1)
+	MOVE.L	(A0),D0
+	MOVE.W	D0,-16(A1)
 	REPT 2
-	MOVE.L	D1,(A1)+
+	MOVE.L	D0,(A1)+
 	ENDR
 		ENDM
 ;********** Demo **********	;Demo-specific non-startup code below.
@@ -108,94 +108,18 @@ Demo:			;a4=VBR, a6=Custom Registers Base addr
 	JSR	_startmusic
 	MOVE.L	#COPPER,COP1LC
 ;********************  main loop  ********************
-MainLoop:
-	; do stuff here :)
+MainLoop:	; do stuff here :)
 	BSR.W	__SET_MED_VALUES
-	.song_blocks_events:
 	;* FOR TIMED EVENTS ON BLOCK ****
 	MOVE.W	MED_SONG_POS,D5
 	LSL.W	#$2,D5		; CALCULATES OFFSET (OPTIMIZED)
 	LEA	TIMELINE,A3
 	MOVE.L	(A3,D5),A4	; THANKS HEDGEHOG!!
-	;JSR	(A4)		; EXECUTE SUBROUTINE BLOCK#
-
-	MOVE.W	MED_BLOCK_LINE,D1
-	;MOVE.W	#$0,D1
-	LSR.W	#$2,D1
-	LSL.W	#$3,D1
-	_PushColors	BG_COLS_TBL,D1,$DFF190
-
-	MOVE.W	AUDIOCHLEV_0,D1
-	;MOVE.W	#$0,D1
-	LSR.W	D1
-	LSL.W	#$3,D1
-	_PushColors	FG_COLS_TBL,D1,$DFF198
-
-	MOVE.B	MED_TRK_3_INST,D0	; ALSO 4 + "E"
-	CMP.B	#$7,D0
-	BNE.S	.not7
-	MOVE.W	AUDIOCHLEV_3,COPPER\.OddMod+2
-
-	;LEA	DITHERPLANE,A4	; FILLS A PLANE
-	;LSL.W	#$4,D1
-	;LSL.W	#$4,D1
-	;ADD.L	D1,A4
-	;MOVE.L	#$A5A5A5A5,D5	; PARAMS
-	;BSR.W	__RandomWord	; PARS
-	;ROR.L	D3,D5		; PARS
-	;BSR.W	__TEXTURIZE_PLANE
-	;BRA.W	.evenFrame
-
-	.not7:
-	CMP.B	#$2,D0
-	BNE.S	.not2
-	SUB.W	#$1,COPPER\.OddMod+2
-	.not2:
-	CMP.B	#$8,D0
-	BNE.S	.not8
-	MOVE.W	#$4,COPPER\.OddMod+2
-	.not8:
-
-	;MOVE.B	MED_TRK_1_INST,D0	; ALSO 4 + "E"
-	;CMP.B	#$4,D0
-	;BNE.S	.not4
-	;ADD.W	#$1,COPPER\.EvenMod+2
-	;BRA.S	.reset
-	;.not4:
-	;MOVE.W	#$4,COPPER\.EvenMod+2
-	;.reset:
-
-	;MOVE.W	MED_BLOCK_LINE,D7
-	BSR.W	__RandomWord
-	MOVE.W	MED_TRK_1_INST,D5
-	MOVE.W	MED_TRK_3_COUNT,D7
-
-	; ## NOISE SECTION ##
-	TST.B	FRAME_STROBE
-	BNE.W	.oddFrame
-	MOVE.B	#1,FRAME_STROBE
-
-	MOVE.W	#(bypl/2)*50-1,D4
-	LEA	BGNOISE1,A4
-	BSR.W	__RANDOMIZE_PLANE
-
-	BRA.W	.evenFrame
-	.oddFrame:
-	MOVE.B	#0,FRAME_STROBE
-
-	MOVE.W	#(bypl/2)*50-1,D4
-	LEA	BGNOISE2,A4
-	BSR.W	__RANDOMIZE_PLANE
-	.evenFrame:
-	; ## NOISE SECTION ##
+	JSR	(A4)		; EXECUTE SUBROUTINE BLOCK#
 
 	; ## TEXT SECTION ##
 	BSR.W	__FETCH_TXT
 	; ## TEXT SECTION ##
-
-	;BTST	#6,$BFE001	; POTINP - LMB pressed?
-	;BNE.W	.dontScroll
-	;.dontScroll:
 
 	; ## MASKING SECTION ##
 	LEA	BGMASK+bypl-PIXELSIDE_W/16*2,A5
@@ -566,10 +490,87 @@ __DITHER_PLANE:
 	DBRA	D4,.outerloop
 	RTS
 
-__BLK_0:	RTS
+__BLK_INTRO:	
+	MOVE.W	AUDIOCHLEV_3,D1
+	LSR.W	#$2,D1
+	LSL.W	#$3,D1
+	_PushColors	BG_COLS_TBL,D1,$DFF190
+	MOVE.W	#$4,D1
+	_PushColors	FG_COLS_TBL,D1,$DFF198
+	RTS
+
+__BLK_0:	
+	MOVE.W	MED_BLOCK_LINE,D1
+	;MOVE.W	#$0,D1
+	LSR.W	#$2,D1
+	LSL.W	#$3,D1
+	_PushColors	BG_COLS_TBL,D1,$DFF190
+
+	MOVE.W	AUDIOCHLEV_0,D1
+	;MOVE.W	#$0,D1
+	LSR.W	D1
+	LSL.W	#$3,D1
+	_PushColors	FG_COLS_TBL,D1,$DFF198
+
+	MOVE.B	MED_TRK_3_INST,D0	; ALSO 4 + "E"
+	CMP.B	#$7,D0
+	BNE.S	.not7
+	MOVE.W	AUDIOCHLEV_3,COPPER\.OddMod+2
+
+	;LEA	DITHERPLANE,A4	; FILLS A PLANE
+	;LSL.W	#$4,D1
+	;LSL.W	#$4,D1
+	;ADD.L	D1,A4
+	;MOVE.L	#$A5A5A5A5,D5	; PARAMS
+	;BSR.W	__RandomWord	; PARS
+	;ROR.L	D3,D5		; PARS
+	;BSR.W	__TEXTURIZE_PLANE
+	;BRA.W	.evenFrame
+
+	.not7:
+	CMP.B	#$2,D0
+	BNE.S	.not2
+	SUB.W	#$1,COPPER\.OddMod+2
+	.not2:
+	CMP.B	#$8,D0
+	BNE.S	.not8
+	MOVE.W	#$4,COPPER\.OddMod+2
+	.not8:
+
+	;MOVE.B	MED_TRK_1_INST,D0	; ALSO 4 + "E"
+	;CMP.B	#$4,D0
+	;BNE.S	.not4
+	;ADD.W	#$1,COPPER\.EvenMod+2
+	;BRA.S	.reset
+	;.not4:
+	;MOVE.W	#$4,COPPER\.EvenMod+2
+	;.reset:
+
+	;MOVE.W	MED_BLOCK_LINE,D7
+	BSR.W	__RandomWord
+	MOVE.W	MED_TRK_1_INST,D5
+	MOVE.W	MED_TRK_3_COUNT,D7
+
+	; ## NOISE SECTION ##
+	MOVE.W	#(bypl/2)*50-1,D4
+	TST.B	FRAME_STROBE
+	BNE.W	.oddFrame
+	MOVE.B	#1,FRAME_STROBE
+	LEA	BGNOISE1,A4
+	BRA.W	.evenFrame
+	.oddFrame:
+	MOVE.B	#0,FRAME_STROBE
+	LEA	BGNOISE2,A4
+	.evenFrame:
+	BSR.W	__RANDOMIZE_PLANE
+	; ## NOISE SECTION ##
+	RTS
 
 ;********** Fastmem Data **********
-TIMELINE:		DC.L __BLK_0,__BLK_0,__BLK_0,__BLK_0
+TIMELINE:		DC.L __BLK_INTRO,__BLK_0,__BLK_0,__BLK_0
+		DC.L __BLK_0,__BLK_0,__BLK_0,__BLK_0
+		DC.L __BLK_0,__BLK_0,__BLK_0,__BLK_0
+		DC.L __BLK_0,__BLK_0,__BLK_0,__BLK_0
 FRAME_STROBE:	DC.B 0,0
 KICKSTART_ADDR:	DC.L $F80000	; POINTERS TO BITMAPS
 TEXTINDEX:	DC.W 0
@@ -626,7 +627,7 @@ FG_COLS_TBL:	DC.W $0665,$0665
 ;*******************************************************************************
 	SECTION	ChipData,DATA_C	;declared data that must be in chipmem
 ;*******************************************************************************
-MED_MODULE:	INCBIN "med/RustEater_2022_FIX2.med"
+MED_MODULE:	INCBIN "med/RustEater_2022_FIX3.med"
 _chipzero:	DC.L 0
 _MED_MODULE:
 
