@@ -1,0 +1,35 @@
+; https://gradient-blaster.grahambates.com/?points=000@0,111@34,443@93,444@111,443@131,332@158,000@239&steps=240&blendMode=linear&ditherMode=off&target=amigaOcs
+	.Gradient:
+	DC.W $2E07,$FFFE
+	DC.W $182,$000
+	DC.W $4D07,$FFFE
+	DC.W $182,$111
+	DC.W $6107,$FFFE
+	DC.W $182,$221
+	DC.W $6907,$FFFE
+	DC.W $182,$222
+	DC.W $7407,$FFFE
+	DC.W $182,$332
+	DC.W $8507,$FFFE
+	DC.W $182,$333
+	DC.W $8607,$FFFE
+	DC.W $182,$443
+	DC.W $9807,$FFFE
+	DC.W $182,$444
+	DC.W $A307,$FFFE
+	DC.W $182,$443
+	DC.W $B707,$FFFE
+	DC.W $182,$442
+	DC.W $B907,$FFFE
+	DC.W $182,$332
+	DC.W $D207,$FFFE
+	DC.W $182,$222
+	DC.W $D307,$FFFE
+	DC.W $182,$221
+	DC.W $EC07,$FFFE
+	DC.W $182,$111
+	DC.W $F907,$FFFE
+	DC.W $182,$110
+	DC.W $FFDF,$FFFE ; PAL FIX
+	DC.W $507,$FFFE
+	DC.W $182,$000
