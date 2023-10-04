@@ -52,16 +52,6 @@ Demo:			;a4=VBR, a6=Custom Registers Base addr
 	;LEA	44(A0),A0
 	;LEA	COPPER\.BplPtrs+32,A1
 	;BSR.W	PokePtrs
-	LEA	TEXTUREPLANE,A0
-	LEA	COPPER\.BplPtrs6,A1
-	BSR.W	PokePtrs
-	;BSR.W	PokePtrs
-	LEA	TEXTUREPLANE,A0
-	LEA	COPPER\.BplPtrs7,A1
-	BSR.W	PokePtrs
-	LEA	TEXTUREPLANE,A0
-	LEA	COPPER\.BplPtrs8,A1
-	BSR.W	PokePtrs
 	; # NOISE AREA ##
 	LEA	BGNOISE1,A0
 	LEA	COPPER\.BplPtrs2,A1
@@ -96,9 +86,9 @@ Demo:			;a4=VBR, a6=Custom Registers Base addr
 	MOVE.L	#$F5A505A5,D5	; PARAMS
 	BSR.W	__RandomWord	; PARS
 	ROR.L	D3,D5		; PARS
-	BSR.W	__TEXTURIZE_PLANE
+	;BSR.W	__TEXTURIZE_PLANE
 	MOVE.L	#$5A5A5A5A,D5	; PARAMS
-	BSR.W	__TEXTURIZE_PLANE
+	;BSR.W	__TEXTURIZE_PLANE
 
 	LEA	BGMASK,A0
 	LEA	BGFILLED,A1
@@ -179,6 +169,9 @@ MainLoop:
 	BSR.W	__RandomWord	; PARS
 	ROR.L	D3,D5		; PARS
 	BSR.W	__TEXTURIZE_PLANE
+	BSR.W	__TEXTURIZE_PLANE
+	BSR.W	__TEXTURIZE_PLANE
+	BSR.W	__TEXTURIZE_PLANE
 	.skip:
 
 	.WaitRasterCopper:
@@ -228,6 +221,175 @@ VBint:				; Blank template VERTB interrupt
 	.notvb:	
 	movem.l	(sp)+,d0/a6	; restore
 	rte
+
+; ## VECTOR PART ##
+__WIPE_PLANE:				; a1=screen destination address to clear
+	BSR	WaitBlitter
+	MOVE.W	#$4,BLTDMOD		; Init modulo Sou. A
+	MOVE.L	#$01000000,BLTCON0		; set operation type in BLTCON0/1
+	MOVE.L	A1,BLTDPTH		; destination address
+	MOVE.W	#he*64+(wi-32)/16,BLTSIZE	; Start Blitter (Blitsize)
+	;MOVE.W	#he*64+(wi/2)/16,BLTSIZE	; FIGHISSIMO!!
+	RTS
+
+__BLIT_VECTORS:
+	; ## GLITCH ##
+	;ROL.B	#1,D3
+	;EXG.L	D0,D3
+	;ROL.B	#1,D1
+	;LSL.L	#2,D2
+	; ## GLITCH ##
+
+	BSR	WaitBlitter
+	MOVE.L	#$FFFFFFFF,BLTAFWM	; BLTAFWM/BLTALWM = $FFFF
+	MOVE.W	#$8000,BLTADAT	; BLTADAT = $8000
+	MOVE.W	#bypl,BLTCMOD	; BLTCMOD = 40
+	MOVE.W	#bypl,BLTDMOD	; BLTDMOD = 40
+	MOVE.W	#$FFFF,BLTBDAT	; BLTBDAT = pattern della linea!
+
+	MOVE.W	COORD_X_POS,D0
+	MOVE.W	COORD_Y_POS,D1
+
+	TST.W	D0		; X=0?
+	BNE.S	.skip1
+	CMP.W	#he,D1		; Y=MAX?
+	BNE.S	.skip1
+	MOVE.W	#0,COORD_X_DIR
+	MOVE.W	#-2,COORD_Y_DIR
+	BRA.S	.skipAll
+	.skip1:
+
+	TST.W	D0		; X=0?
+	BNE.S	.not0
+	TST.W	D1		; Y=0?
+	BNE.S	.not0
+	MOVE.W	#2,COORD_X_DIR
+	MOVE.W	#0,COORD_Y_DIR
+	BRA.S	.skipAll
+	.not0:
+	CMP.W	#he,D1		; Y=MAX?
+	BNE.S	.notYMax
+	MOVE.W	#-2,COORD_X_DIR
+	MOVE.W	#0,COORD_Y_DIR
+	BRA.S	.skipAll
+	.notYMax:
+	CMP.W	#wi-32,D0		; X=MAX?
+	BNE.S	.notXMax
+	MOVE.W	#0,COORD_X_DIR
+	MOVE.W	#2,COORD_Y_DIR
+	.notXMax:
+
+	.skipAll:
+	MOVE.W	#wi/2,D2
+	MOVE.W	#he/2,D3
+	BSR.W	Drawline
+
+	MOVE.W	COORD_X_DIR,D5
+	ADD.W	D5,COORD_X_POS
+	MOVE.W	COORD_Y_DIR,D5
+	ADD.W	D5,COORD_Y_POS
+
+	;MOVE.W	COORD_X_POS,D0
+	;MOVE.W	COORD_Y_POS,D1
+	;MOVE.W	#wi/2,D2
+	;MOVE.W	#he/2,D3
+	;BSR.W	Drawline
+	RTS
+
+Drawline:				; ROUTINE STOLEN FROM RAM_JAM
+	sub.w	d1,d3		; D3=Y2-Y1
+	beq.w	.skip		; per il fill non servono linee orizzontali 
+	bgt.s	.y2gy1		; salta se positivo..
+	exg	d0,d2		; ..altrimenti scambia i punti
+	add.w	d3,d1		; mette in D1 la Y piu` piccola
+	neg.w	d3		; D3=DY
+	.y2gy1:
+	mulu.w	#bypl,d1		; offset Y
+	add.l	d1,A6
+	moveq	#0,d1		; D1 indice nella tabella ottanti
+	sub.w	d0,d2		; D2=X2-X1
+	bge.s	.xdpos		; salta se positivo..
+	addq.w	#2,d1		; ..altrimenti sposta l'indice
+	neg.w	d2		; e rendi positiva la differenza
+	.xdpos:
+	moveq	#$f,D6		; maschera per i 4 bit bassi
+	and.w	d0,D6		; selezionali in D4
+	
+				; solo se DL_Fill=1
+	move.b	D6,d5		; calcola numero del bit da invertire
+	not.b	d5		; (la BCHG numera i bit in modo inverso	
+
+	lsr.w	#3,d0		; offset X:
+				; Allinea a byte (serve per BCHG)
+	add.w	d0,A6		; aggiunge all'indirizzo
+				; nota che anche se l'indirizzo
+				; e` dispari non fa nulla perche`
+				; il blitter non tiene conto del
+				; bit meno significativo di BLTxPT
+
+	ror.w	#4,D6		; D4 = valore di shift A
+	ori.w	#$0B4A,D6		; aggiunge l'opportuno
+				; Minterm (OR o EOR)
+	swap	D6		; valore di BLTCON0 nella word alta
+		
+	cmp.w	d2,d3		; confronta DiffX e DiffY
+	bge.s	.dygdx		; salta se >=0..
+	addq.w	#1,d1		; altrimenti setta il bit 0 del'indice
+	exg	d2,d3		; e scambia le Diff
+	.dygdx:
+	add.w	d2,d2		; D2 = 2*DiffX
+	move.w	d2,d0		; copia in D0
+	sub.w	d3,d0		; D0 = 2*DiffX-DiffY
+	addx.w	d1,d1		; moltiplica per 2 l'indice e
+				; contemporaneamente aggiunge il flag
+				; X che vale 1 se 2*DiffX-DiffY<0
+				; (settato dalla sub.w)
+	move.b	OKTS(PC,d1.w),D6	; legge l'ottante
+	swap	d2		; valore BLTBMOD in word alta
+	move.w	d0,d2		; word bassa D2=2*DiffX-DiffY
+	sub.w	d3,d2		; word bassa D2=2*DiffX-2*DiffY
+	moveq	#6,d1		; valore di shift e di test per
+				; la wait blitter 
+	lsl.w	d1,d3		; calcola il valore di BLTSIZE
+	add.w	#$42,d3
+
+	BSR	WaitBlitter
+	bchg	d5,(A6)		; Inverte il primo bit della linea
+
+	move.l	D6,BLTCON0	; BLTCON0/1
+	move.l	D2,BLTBMOD	; BLTBMOD e BLTAMOD
+	move.l	A6,BLTCPTH	; BLTCPT
+	move.w	D0,BLTAPTL	; BLTAPTL
+	move.l	A6,BLTDPTH	; BLTDPT - indirizzo schermo
+	move.w	D3,BLTSIZE	; BLTSIZE
+	.skip:
+	rts
+
+	OKTS:
+	DC.B 3,3+$40
+	DC.B 19,19+$40
+	DC.B 11,11+$40
+	DC.B 23,23+$40
+
+__BLIT_3D_IN_PLACE:
+	LEA	BUFFER3D,A4
+	ADD.L	#(bypl*he)-4-2,A4
+	;ADD.L	#BLIT_POSITION,A4
+	LEA	TEXTUREPLANE,A5
+	ADD.L	#(bypl*he)-4-2,A5
+	;ADD.L	#BLIT_POSITION,A5
+	BSR.W	WaitBlitter
+	MOVE.W	#$FFFF,BLTAFWM		; BLTAFWM
+	MOVE.W	#$FFFF,BLTALWM		; BLTALWM
+	MOVE.W	#%0000100111110000,BLTCON0	; BLTCON0
+	MOVE.W	#%0000000000010010,BLTCON1	; BLTCON1
+	MOVE.W	#4,BLTAMOD		; BLTAMOD
+	MOVE.W	#4,BLTDMOD		; Init modulo Dest D
+	MOVE.L	A4,BLTAPTH		; BLTAPT  (fisso alla figura sorgente)
+	MOVE.L	A5,BLTDPTH
+	MOVE.W	#he*64+(wi-32)/16,BLTSIZE	; Start Blitter (Blitsize)
+	RTS
+; ## VECTOR PART ##
 
 __SET_MED_VALUES:
 	MOVE.W	MED_STEPSEQ_POS,D0		; UPDATE STEPSEQUENCER
@@ -507,7 +669,8 @@ __DITHER_PLANE:
 	DBRA	D4,.outerloop
 	RTS
 
-__BLK_INTRO:	
+__BLK_INTRO:
+	BSR.W	__BLK_VECT
 	MOVE.W	AUDIOCHLEV_3,D1
 	LSR.W	#$2,D1
 	LSL.W	#$3,D1
@@ -524,7 +687,7 @@ __BLK_INTRO:
 	;LSR.W	D1
 	LSL.W	#$2,D1
 	;_PushColors	FG_COLS_TBL,D1,$DFF198
-	BRA.W	__BLK_BG
+	;BRA.W	__BLK_BG
 	.not4:
 
 	;MOVE.W	MED_BLOCK_LINE,D7
@@ -547,7 +710,7 @@ __BLK_INTRO:
 	; ## NOISE SECTION ##
 	RTS
 
-__BLK_0:	
+__BLK_0:
 	MOVE.W	MED_BLOCK_LINE,D1
 	;MOVE.W	#$0,D1
 	LSR.W	#$2,D1
@@ -652,9 +815,24 @@ __BLK_BG:
 	; ## NOISE SECTION ##
 	RTS
 
+__BLK_VECT:
+	LEA	BUFFER3D,A1
+	;LEA	TEXTUREPLANE,A1
+	MOVE.L	A1,A6
+	BSR.W	__WIPE_PLANE
+	BSR.W	__BLIT_VECTORS
+	BSR.W	__BLIT_3D_IN_PLACE
+
+	MOVE.W	AUDIOCHLEV_0,D1
+	LSR.W	#1,D1
+	LSL.W	#1,D1
+	ADD.W	#2,D1
+	RTS
+
 ;********** Fastmem Data **********
 TIMELINE:		;DC.L __BLK_0,__BLK_0,__BLK_0,__BLK_0
-		DC.L __BLK_INTRO,__BLK_INTRO,__BLK_INTRO,__BLK_0
+		DC.L __BLK_INTRO,__BLK_INTRO,__BLK_INTRO,__BLK_INTRO
+		DC.L __BLK_INTRO,__BLK_INTRO,__BLK_INTRO,__BLK_INTRO
 		DC.L __BLK_0,__BLK_0,__BLK_0,__BLK_0
 		DC.L __BLK_0,__BLK_0,__BLK_0,__BLK_0
 		DC.L __BLK_0,__BLK_0,__BLK_0,__BLK_0
@@ -677,8 +855,10 @@ AUDIOCHLEV_0:	DC.W 0
 AUDIOCHLEV_1:	DC.W 0
 AUDIOCHLEV_2:	DC.W 0
 AUDIOCHLEV_3:	DC.W 0
-TMP_TEXTUREPLANE:	DC.L TEXTUREPLANE
-TMP_TEXTURE_SEED:	DC.L 0
+COORD_X_POS:	DC.W 0
+COORD_X_DIR:	DC.W 0
+COORD_Y_POS:	DC.W 0
+COORD_Y_DIR:	DC.W 0
 
 FONT:		DC.L 0,0		; SPACE CHAR
 		INCBIN "c_font_leftpadding2.raw",0
@@ -790,27 +970,12 @@ COPPER:
 	DC.W $EC,0
 	DC.W $EE,0
 
-	DC.W $6C07,$FF00		; ## TEXTURE REPEATS EVERY 64 LINES ##
-	.BplPtrs6:
-	DC.W $E8,0
-	DC.W $EA,0
-
 	DC.W $9A07,$FF00		; ## NOISE REPOINTED ONLY ON BOTH PLANES ##
 	.BplPtrs4:
 	DC.W $E0,0
 	DC.W $E2,0
 	DC.W $E4,0
 	DC.W $E6,0
-
-	DC.W $AC07,$FF00		; ## TEXTURE REPEATS EVERY 64 LINES ##
-	.BplPtrs7:
-	DC.W $E8,0
-	DC.W $EA,0
-
-	DC.W $EC07,$FF00		; ## TEXTURE REPEATS EVERY 64 LINES ##
-	.BplPtrs8:
-	DC.W $E8,0
-	DC.W $EA,0
 
 	DC.W $F607,$FF00		; ## END OF NOISE PART ##
 	.BplPtrs5:
@@ -821,10 +986,10 @@ COPPER:
 	DC.W $EC,0
 	DC.W $EE,0
 
-	DC.W $FFDF,$FFFE	; allow VPOS>$ff
-	DC.W $3507,$FF00	; ## RASTER END ## #$12C?
-	DC.W $009A,$0010	; CLEAR RASTER BUSY FLAG
-	DC.W $FFFF,$FFFE	; magic value to end copperlist
+	DC.W $FFDF,$FFFE		; allow VPOS>$ff
+	DC.W $3507,$FF00		; ## RASTER END ## #$12C?
+	DC.W $009A,$0010		; CLEAR RASTER BUSY FLAG
+	DC.W $FFFF,$FFFE		; magic value to end copperlist
 
 ;*******************************************************************************
 	SECTION ChipBuffers,BSS_C	;BSS doesn't count toward exe size
@@ -835,8 +1000,10 @@ CHAR_ROTATION:	DS.B 8
 BLEEDTOP:		DS.B bypl
 BGNOISE1:		DS.B 50*bypl
 BGNOISE2:		DS.B 50*bypl
-TEXTUREPLANE:	DS.B he/2*bypl
+BLEEDVECTOR:	DS.B he/4*bypl
+TEXTUREPLANE:	DS.B he*bypl
 BGEMPTY:		DS.B he*bypl
 BGMASK:		DS.B he*bypl
 BGFILLED:		DS.B he*bypl
+BUFFER3D:		DS.B he*bypl	; bigger to hold zoom
 END
