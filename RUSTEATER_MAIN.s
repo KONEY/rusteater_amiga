@@ -239,7 +239,6 @@ __BLIT_VECTORS:
 	;ROL.B	#1,D1
 	;LSL.L	#2,D2
 	; ## GLITCH ##
-
 	BSR	WaitBlitter
 	MOVE.L	#$FFFFFFFF,BLTAFWM	; BLTAFWM/BLTALWM = $FFFF
 	MOVE.W	#$8000,BLTADAT	; BLTADAT = $8000
@@ -247,53 +246,35 @@ __BLIT_VECTORS:
 	MOVE.W	#bypl,BLTDMOD	; BLTDMOD = 40
 	MOVE.W	#$FFFF,BLTBDAT	; BLTBDAT = pattern della linea!
 
-	MOVE.W	COORD_X_POS,D0
-	MOVE.W	COORD_Y_POS,D1
-
-	TST.W	D0		; X=0?
-	BNE.S	.skip1
-	CMP.W	#he,D1		; Y=MAX?
-	BNE.S	.skip1
-	MOVE.W	#0,COORD_X_DIR
-	MOVE.W	#-2,COORD_Y_DIR
-	BRA.S	.skipAll
-	.skip1:
-
-	TST.W	D0		; X=0?
-	BNE.S	.not0
-	TST.W	D1		; Y=0?
-	BNE.S	.not0
-	MOVE.W	#2,COORD_X_DIR
-	MOVE.W	#0,COORD_Y_DIR
-	BRA.S	.skipAll
-	.not0:
-	CMP.W	#he,D1		; Y=MAX?
-	BNE.S	.notYMax
-	MOVE.W	#-2,COORD_X_DIR
-	MOVE.W	#0,COORD_Y_DIR
-	BRA.S	.skipAll
-	.notYMax:
-	CMP.W	#wi-32,D0		; X=MAX?
-	BNE.S	.notXMax
-	MOVE.W	#0,COORD_X_DIR
-	MOVE.W	#2,COORD_Y_DIR
-	.notXMax:
-
-	.skipAll:
-	MOVE.W	#wi/2,D2
-	MOVE.W	#he/2,D3
+	LEA	COORDS_1,A0
+	BSR.W	UPDATE_COORDS_OPT
+	MOVE.W	(A0),D0
+	MOVE.W	2(A0),D1
+	LEA	COORDS_2,A0
+	BSR.W	UPDATE_COORDS_OPT
+	MOVE.W	(A0),D2
+	MOVE.W	2(A0),D3
 	BSR.W	Drawline
 
-	MOVE.W	COORD_X_DIR,D5
-	ADD.W	D5,COORD_X_POS
-	MOVE.W	COORD_Y_DIR,D5
-	ADD.W	D5,COORD_Y_POS
+	LEA	COORDS_3,A0
+	BSR.W	UPDATE_COORDS_OPT
+	MOVE.W	(A0),D0
+	MOVE.W	2(A0),D1
+	LEA	COORDS_4,A0
+	BSR.W	UPDATE_COORDS_OPT
+	MOVE.W	(A0),D2
+	MOVE.W	2(A0),D3
+	BSR.W	Drawline
 
-	;MOVE.W	COORD_X_POS,D0
-	;MOVE.W	COORD_Y_POS,D1
-	;MOVE.W	#wi/2,D2
-	;MOVE.W	#he/2,D3
-	;BSR.W	Drawline
+	LEA	COORDS_5,A0
+	BSR.W	UPDATE_COORDS_OPT
+	MOVE.W	(A0),D0
+	MOVE.W	2(A0),D1
+	LEA	COORDS_6,A0
+	BSR.W	UPDATE_COORDS_OPT
+	MOVE.W	(A0),D2
+	MOVE.W	2(A0),D3
+	BSR.W	Drawline
 	RTS
 
 Drawline:				; ROUTINE STOLEN FROM RAM_JAM
@@ -374,10 +355,8 @@ Drawline:				; ROUTINE STOLEN FROM RAM_JAM
 __BLIT_3D_IN_PLACE:
 	LEA	BUFFER3D,A4
 	ADD.L	#(bypl*he)-4-2,A4
-	;ADD.L	#BLIT_POSITION,A4
 	LEA	TEXTUREPLANE,A5
 	ADD.L	#(bypl*he)-4-2,A5
-	;ADD.L	#BLIT_POSITION,A5
 	BSR.W	WaitBlitter
 	MOVE.W	#$FFFF,BLTAFWM		; BLTAFWM
 	MOVE.W	#$FFFF,BLTALWM		; BLTALWM
@@ -388,6 +367,87 @@ __BLIT_3D_IN_PLACE:
 	MOVE.L	A4,BLTAPTH		; BLTAPT  (fisso alla figura sorgente)
 	MOVE.L	A5,BLTDPTH
 	MOVE.W	#he*64+(wi-32)/16,BLTSIZE	; Start Blitter (Blitsize)
+	RTS
+
+UPDATE_COORDS_OPT:			; RETURNS (A0)=X - 2(A0)=Y
+	TST.L	(A0)		; X-Y=0?
+	BNE.S	.skip1
+	MOVE.L	4(A0),D5
+	NEG.W	D5
+	SWAP	D5
+	NEG.W	D5
+	MOVE.L	D5,4(A0)
+	BRA.S	.skipAll
+	.skip1:
+
+	CMP.L	#((wi-32)<<16),(A0)	; X=MAX & Y=0?
+	BNE.S	.skip2
+	MOVE.L	4(A0),D5
+	SWAP	D5
+	MOVE.L	D5,4(A0)
+	BRA.S	.skipAll
+	.skip2:
+
+	CMP.L	#((wi-32)<<16)+he,(A0) ; X=MAX & Y=MAX?
+	BNE.S	.skip3
+	MOVE.L	4(A0),D5
+	NEG.W	D5
+	SWAP	D5
+	NEG.W	D5
+	MOVE.L	D5,4(A0)
+	BRA.S	.skipAll
+	.skip3:
+
+	CMP.L	#he,(A0)		; X=0 & Y=MAX?
+	BNE.S	.skip4
+	MOVE.L	4(A0),D5
+	SWAP	D5
+	MOVE.L	D5,4(A0)
+	BRA.S	.skipAll
+	.skip4:
+
+	.skipAll:
+	MOVE.W	4(A0),D5		; DIR
+	ADD.W	D5,(A0)
+	MOVE.W	6(A0),D5
+	ADD.W	D5,2(A0)
+	RTS
+
+UPDATE_COORDS:			; RETURNS (A0)=X - 2(A0)=Y
+	TST.W	(A0)		; X=0?
+	BNE.S	.skip1
+	CMP.W	#he,2(A0)		; Y=MAX?
+	BNE.S	.skip1
+	MOVE.W	#0,4(A0)
+	MOVE.W	#-2,6(A0)
+	BRA.S	.skipAll
+	.skip1:
+
+	TST.W	(A0)		; X=0?
+	BNE.S	.not0
+	TST.W	2(A0)		; Y=0?
+	BNE.S	.not0
+	MOVE.W	#2,4(A0)
+	MOVE.W	#0,6(A0)
+	BRA.S	.skipAll
+	.not0:
+	CMP.W	#he,2(A0)		; Y=MAX?
+	BNE.S	.notYMax
+	MOVE.W	#-2,4(A0)
+	MOVE.W	#0,6(A0)
+	BRA.S	.skipAll
+	.notYMax:
+	CMP.W	#wi-32,(A0)	; X=MAX?
+	BNE.S	.notXMax
+	MOVE.W	#0,4(A0)
+	MOVE.W	#2,6(A0)
+	.notXMax:
+
+	.skipAll:
+	MOVE.W	4(A0),D5		; DIR
+	ADD.W	D5,(A0)
+	MOVE.W	6(A0),D5
+	ADD.W	D5,2(A0)
 	RTS
 ; ## VECTOR PART ##
 
@@ -855,10 +915,12 @@ AUDIOCHLEV_0:	DC.W 0
 AUDIOCHLEV_1:	DC.W 0
 AUDIOCHLEV_2:	DC.W 0
 AUDIOCHLEV_3:	DC.W 0
-COORD_X_POS:	DC.W 0
-COORD_X_DIR:	DC.W 0
-COORD_Y_POS:	DC.W 0
-COORD_Y_DIR:	DC.W 0
+COORDS_1:		DC.W 320,250,0,-1	; WPOS, HPOS, WDIR, HDIR
+COORDS_2:		DC.W 0,2,0,1	; WPOS, HPOS, WDIR, HDIR
+COORDS_3:		DC.W 300,0,-4,0	; WPOS, HPOS, WDIR, HDIR
+COORDS_4:		DC.W 0,250,0,4	; WPOS, HPOS, WDIR, HDIR
+COORDS_5:		DC.W 140,0,2,0	; WPOS, HPOS, WDIR, HDIR
+COORDS_6:		DC.W 180,256,-2,0	; WPOS, HPOS, WDIR, HDIR
 
 FONT:		DC.L 0,0		; SPACE CHAR
 		INCBIN "c_font_leftpadding2.raw",0
