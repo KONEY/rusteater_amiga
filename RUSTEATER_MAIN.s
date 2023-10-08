@@ -15,7 +15,9 @@ bwid		EQU bpls*bypl	; byte-width of 1 pixel line (all bpls)
 SCROLL_SPEED	EQU 2
 PIXELSIDE_W	EQU 32/SCROLL_SPEED
 PIXELSIDE_H	EQU 32
-TXT_FRMSKIP 	EQU PIXELSIDE_W*6
+TXT_FRMSKIP	EQU PIXELSIDE_W*6
+wblt		EQU wi-32
+hblt		EQU he
 ;*************
 _PushColors:	MACRO
 	LEA	\1,A0
@@ -265,7 +267,7 @@ __BLIT_VECTORS:
 	MOVE.W	(A0),D2
 	MOVE.W	2(A0),D3
 	BSR.W	Drawline
-
+	
 	LEA	COORDS_5,A0
 	BSR.W	UPDATE_COORDS_OPT
 	MOVE.W	(A0),D0
@@ -275,11 +277,21 @@ __BLIT_VECTORS:
 	MOVE.W	(A0),D2
 	MOVE.W	2(A0),D3
 	BSR.W	Drawline
+	
+	LEA	COORDS_4,A0
+	MOVE.W	(A0),D0
+	MOVE.W	2(A0),D1
+	LEA	COORDS_1,A0
+	MOVE.W	(A0),D2
+	MOVE.W	2(A0),D3
+	BSR.W	Drawline
+	.noLines:
 	RTS
 
 Drawline:				; ROUTINE STOLEN FROM RAM_JAM
 	sub.w	d1,d3		; D3=Y2-Y1
 	beq.w	.skip		; per il fill non servono linee orizzontali 
+	LEA	(A6),A1		; BACKUP DESTINATION
 	bgt.s	.y2gy1		; salta se positivo..
 	exg	d0,d2		; ..altrimenti scambia i punti
 	add.w	d3,d1		; mette in D1 la Y piu` piccola
@@ -343,8 +355,9 @@ Drawline:				; ROUTINE STOLEN FROM RAM_JAM
 	move.w	D0,BLTAPTL	; BLTAPTL
 	move.l	A6,BLTDPTH	; BLTDPT - indirizzo schermo
 	move.w	D3,BLTSIZE	; BLTSIZE
+	LEA	(A1),A6		; BACKUP DESTINATION
 	.skip:
-	rts
+	RTS
 
 	OKTS:
 	DC.B 3,3+$40
@@ -366,7 +379,7 @@ __BLIT_3D_IN_PLACE:
 	MOVE.W	#4,BLTDMOD		; Init modulo Dest D
 	MOVE.L	A4,BLTAPTH		; BLTAPT  (fisso alla figura sorgente)
 	MOVE.L	A5,BLTDPTH
-	MOVE.W	#he*64+(wi-32)/16,BLTSIZE	; Start Blitter (Blitsize)
+	MOVE.W	#he*64+wblt/16,BLTSIZE	; Start Blitter (Blitsize)
 	RTS
 
 UPDATE_COORDS_OPT:			; RETURNS (A0)=X - 2(A0)=Y
@@ -380,7 +393,7 @@ UPDATE_COORDS_OPT:			; RETURNS (A0)=X - 2(A0)=Y
 	BRA.S	.skipAll
 	.skip1:
 
-	CMP.L	#((wi-32)<<16),(A0)	; X=MAX & Y=0?
+	CMP.L	#(wblt<<16),(A0)	; X=MAX & Y=0?
 	BNE.S	.skip2
 	MOVE.L	4(A0),D5
 	SWAP	D5
@@ -388,7 +401,7 @@ UPDATE_COORDS_OPT:			; RETURNS (A0)=X - 2(A0)=Y
 	BRA.S	.skipAll
 	.skip2:
 
-	CMP.L	#((wi-32)<<16)+he,(A0) ; X=MAX & Y=MAX?
+	CMP.L	#(wblt<<16)+hblt,(A0) ; X=MAX & Y=MAX?
 	BNE.S	.skip3
 	MOVE.L	4(A0),D5
 	NEG.W	D5
@@ -398,7 +411,7 @@ UPDATE_COORDS_OPT:			; RETURNS (A0)=X - 2(A0)=Y
 	BRA.S	.skipAll
 	.skip3:
 
-	CMP.L	#he,(A0)		; X=0 & Y=MAX?
+	CMP.L	#hblt,(A0)	; X=0 & Y=MAX?
 	BNE.S	.skip4
 	MOVE.L	4(A0),D5
 	SWAP	D5
@@ -915,12 +928,13 @@ AUDIOCHLEV_0:	DC.W 0
 AUDIOCHLEV_1:	DC.W 0
 AUDIOCHLEV_2:	DC.W 0
 AUDIOCHLEV_3:	DC.W 0
-COORDS_1:		DC.W 320,250,0,-1	; WPOS, HPOS, WDIR, HDIR
-COORDS_2:		DC.W 0,2,0,1	; WPOS, HPOS, WDIR, HDIR
-COORDS_3:		DC.W 300,0,-4,0	; WPOS, HPOS, WDIR, HDIR
-COORDS_4:		DC.W 0,250,0,4	; WPOS, HPOS, WDIR, HDIR
-COORDS_5:		DC.W 140,0,2,0	; WPOS, HPOS, WDIR, HDIR
-COORDS_6:		DC.W 180,256,-2,0	; WPOS, HPOS, WDIR, HDIR
+COORDS_1:		DC.W wblt,0,2,0	; WPOS, HPOS, WDIR, HDIR
+COORDS_2:		DC.W 0,hblt,-2,0	; WPOS, HPOS, WDIR, HDIR
+COORDS_3:		DC.W 312,0,-4,0	; WPOS, HPOS, WDIR, HDIR
+COORDS_4:		DC.W 4,hblt,4,0	; WPOS, HPOS, WDIR, HDIR
+COORDS_5:		DC.W 160,0,-8,0	; WPOS, HPOS, WDIR, HDIR
+COORDS_6:		DC.W 160,hblt,8,0	; WPOS, HPOS, WDIR, HDIR
+
 
 FONT:		DC.L 0,0		; SPACE CHAR
 		INCBIN "c_font_leftpadding2.raw",0
