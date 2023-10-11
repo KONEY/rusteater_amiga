@@ -18,8 +18,6 @@ PIXELSIDE_H	EQU 32
 TXT_FRMSKIP	EQU PIXELSIDE_W*6
 wblt		EQU wi-32
 hblt		EQU he
-COP_WAITS		EQU 44
-COP_COLS_REGS	EQU 6
 ;*************
 _PushColors:	MACRO
 	LEA	\1,A0
@@ -40,44 +38,50 @@ Demo:			;a4=VBR, a6=Custom Registers Base addr
 	;BSET	#10,BPLCON0
 	;*--- start copper ---*
 	; ## EMPTY AREA ##
-	LEA	BGNOISE0,A0
+	LEA	BGEMPTY,A0
 	LEA	COPPER\.BplPtrs,A1
 	BSR.W	PokePtrs
-	LEA	BGNOISE0,A0
-	LEA	-2(A0),A0
+	LEA	BGEMPTY,A0
 	LEA	COPPER\.BplPtrs+8,A1
 	BSR.W	PokePtrs
 	LEA	TEXTUREPLANE,A0
 	LEA	COPPER\.BplPtrs+16,A1
 	BSR.W	PokePtrs
-	LEA	BGMASKPRE,A0
+	LEA	BGFILLED,A0
 	LEA	COPPER\.BplPtrs+24,A1
 	BSR.W	PokePtrs
+	;LEA	TEXTUREPLANE,A0
+	;LEA	44(A0),A0
+	;LEA	COPPER\.BplPtrs+32,A1
+	;BSR.W	PokePtrs
 	; # NOISE AREA ##
-	;LEA	BGNOISE1,A0
-	;LEA	COPPER\.BplPtrs2,A1
-	;BSR.W	PokePtrs
-	;LEA	BGNOISE1,A0
-	;LEA	-2(A0),A0
-	;LEA	COPPER\.BplPtrs2+8,A1
-	;BSR.W	PokePtrs
-	;LEA	BGNOISE1,A0
-	;LEA	COPPER\.BplPtrs4,A1
-	;BSR.W	PokePtrs
-	;LEA	BGNOISE1,A0
-	;LEA	2(A0),A0
-	;LEA	COPPER\.BplPtrs4+8,A1
-	;BSR.W	PokePtrs
-	;; # NOISE AREA ##
-	;LEA	BGMASK,A0
-	;LEA	COPPER\.BplPtrs3,A1
-	;BSR.W	PokePtrs
-	;LEA	BGEMPTY,A0
-	;LEA	COPPER\.BplPtrs5,A1
-	;BSR.W	PokePtrs
-	;LEA	BGEMPTY,A0
-	;LEA	COPPER\.BplPtrs5+8,A1
-	;BSR.W	PokePtrs
+	LEA	BGNOISE1,A0
+	LEA	COPPER\.BplPtrs2,A1
+	BSR.W	PokePtrs
+	LEA	BGNOISE1,A0
+	LEA	-2(A0),A0
+	LEA	COPPER\.BplPtrs2+8,A1
+	BSR.W	PokePtrs
+	LEA	BGNOISE1,A0
+	LEA	COPPER\.BplPtrs4,A1
+	BSR.W	PokePtrs
+	LEA	BGNOISE1,A0
+	LEA	2(A0),A0
+	LEA	COPPER\.BplPtrs4+8,A1
+	BSR.W	PokePtrs
+	; # NOISE AREA ##
+	LEA	BGMASK,A0
+	LEA	COPPER\.BplPtrs3,A1
+	BSR.W	PokePtrs
+	LEA	BGEMPTY,A0
+	LEA	COPPER\.BplPtrs5,A1
+	BSR.W	PokePtrs
+	LEA	BGEMPTY,A0
+	LEA	COPPER\.BplPtrs5+8,A1
+	BSR.W	PokePtrs
+	LEA	BGFILLED,A0
+	LEA	COPPER\.BplPtrs5+16,A1
+	BSR.W	PokePtrs
 
 	; #### CPU INTENSIVE TASKS BEFORE STARTING MUSIC
 	LEA	TEXTUREPLANE,A4	; FILLS A PLANE
@@ -99,12 +103,6 @@ Demo:			;a4=VBR, a6=Custom Registers Base addr
 	;_PushColors	BG_COLS_TBL,#0,$DFF190
 	;_PushColors	FG_COLS_TBL,#0,$DFF198
 	CLR.L	D7
-	; #### EXTRACT COPPERLISTS  ######
-	LEA	GRADIENT,A0
-	LEA	COPPER\.Waits,A1
-	LEA	GRADIENT_REGISTERS,A3
-	BSR.W	__DECRUNCH_COPPERLIST
-
 	; #### CPU INTENSIVE TASKS BEFORE STARTING MUSIC
 
 	; in photon's wrapper comment:;move.w d2,$9a(a6) ;INTENA
@@ -168,8 +166,8 @@ MainLoop:
 
 	BTST	#6,$BFE001	; POTINP - LMB pressed?
 	BNE.S	.skip
-	LEA	BUFFER3D,A4	; FILLS A PLANE
-	MOVE.L	#$5A5AA5A5,D5	; PARAMS
+	LEA	TEXTUREPLANE,A4	; FILLS A PLANE
+	MOVE.L	#$A5A5A5A5,D5	; PARAMS
 	BSR.W	__RandomWord	; PARS
 	ROR.L	D3,D5		; PARS
 	BSR.W	__TEXTURIZE_PLANE
@@ -226,35 +224,146 @@ VBint:				; Blank template VERTB interrupt
 	movem.l	(sp)+,d0/a6	; restore
 	rte
 
-__DECRUNCH_COPPERLIST:
-	MOVE.W	#COP_WAITS-1,D7
-	.loop:
-	TST.W	(A0)		; ZEROED WORD = allow VPOS>$ff
-	BNE.S	.notFF
-	MOVE.L	#$FFDFFFFE,(A1)+	; allow VPOS>$ff
-	LEA	2(A0),A0		; NEXT
-	BRA.S	.skip
-	.notFF:
-	MOVE.B	(A0)+,D0		; FIRST WAIT
-	LSL.W	#8,D0
-	MOVE.B	#$07,D0		; CMD RESTORED $1C07
-	MOVE.W	D0,(A1)+		; WAIT
-	MOVE.W	#$FFFE,(A1)+	; WAIT
-	CLR.L	D1
-	MOVE.B	(A0),D1		; BYTE FOR COLOR
-	LSL.W	#4,D1		; EXTEND FIRST NIBBLE
-	MOVE.B	(A0)+,D1		; FOR RED VALUE
-	MOVE.W	#COP_COLS_REGS-1,D6
-	.innerLoop:
-	CLR.W	$100		; DEBUG | w 0 100 2
-	LSL.W	D6		; ONLY EVEN VALUES
-	MOVE.W	(A3,D6.W),(A1)+	; COLOR REGISTER
-	MOVE.W	D1,(A1)+		; COLOR VALUE
-	LSR.W	D6		; GO BACK TO COUNTER
-	DBRA	D6,.innerLoop
-	.skip:
-	DBRA	D7,.loop
+; ## VECTOR PART ##
+__WIPE_PLANE:				; a1=screen destination address to clear
+	BSR	WaitBlitter
+	MOVE.W	#$4,BLTDMOD		; Init modulo Sou. A
+	MOVE.L	#$01000000,BLTCON0		; set operation type in BLTCON0/1
+	MOVE.L	A1,BLTDPTH		; destination address
+	MOVE.W	#he*64+(wi-32)/16,BLTSIZE	; Start Blitter (Blitsize)
+	;MOVE.W	#he*64+(wi/2)/16,BLTSIZE	; FIGHISSIMO!!
 	RTS
+
+__BLIT_VECTORS:
+	; ## GLITCH ##
+	;ROL.B	#1,D3
+	;EXG.L	D0,D3
+	;ROL.B	#1,D1
+	;LSL.L	#2,D2
+	; ## GLITCH ##
+	BSR	WaitBlitter
+	MOVE.L	#$FFFFFFFF,BLTAFWM	; BLTAFWM/BLTALWM = $FFFF
+	MOVE.W	#$8000,BLTADAT	; BLTADAT = $8000
+	MOVE.W	#bypl,BLTCMOD	; BLTCMOD = 40
+	MOVE.W	#bypl,BLTDMOD	; BLTDMOD = 40
+	MOVE.W	#$FFFF,BLTBDAT	; BLTBDAT = pattern della linea!
+
+	LEA	COORDS_1,A0
+	BSR.W	UPDATE_COORDS_OPT
+	MOVE.W	(A0),D0
+	MOVE.W	2(A0),D1
+	LEA	COORDS_2,A0
+	BSR.W	UPDATE_COORDS_OPT
+	MOVE.W	(A0),D2
+	MOVE.W	2(A0),D3
+	BSR.W	Drawline
+
+	LEA	COORDS_3,A0
+	BSR.W	UPDATE_COORDS_OPT
+	MOVE.W	(A0),D0
+	MOVE.W	2(A0),D1
+	LEA	COORDS_4,A0
+	BSR.W	UPDATE_COORDS_OPT
+	MOVE.W	(A0),D2
+	MOVE.W	2(A0),D3
+	BSR.W	Drawline
+	
+	LEA	COORDS_5,A0
+	BSR.W	UPDATE_COORDS_OPT
+	MOVE.W	(A0),D0
+	MOVE.W	2(A0),D1
+	LEA	COORDS_6,A0
+	BSR.W	UPDATE_COORDS_OPT
+	MOVE.W	(A0),D2
+	MOVE.W	2(A0),D3
+	BSR.W	Drawline
+	
+	LEA	COORDS_4,A0
+	MOVE.W	(A0),D0
+	MOVE.W	2(A0),D1
+	LEA	COORDS_1,A0
+	MOVE.W	(A0),D2
+	MOVE.W	2(A0),D3
+	BSR.W	Drawline
+	.noLines:
+	RTS
+
+Drawline:				; ROUTINE STOLEN FROM RAM_JAM
+	sub.w	d1,d3		; D3=Y2-Y1
+	beq.w	.skip		; per il fill non servono linee orizzontali 
+	LEA	(A6),A1		; BACKUP DESTINATION
+	bgt.s	.y2gy1		; salta se positivo..
+	exg	d0,d2		; ..altrimenti scambia i punti
+	add.w	d3,d1		; mette in D1 la Y piu` piccola
+	neg.w	d3		; D3=DY
+	.y2gy1:
+	mulu.w	#bypl,d1		; offset Y
+	add.l	d1,A6
+	moveq	#0,d1		; D1 indice nella tabella ottanti
+	sub.w	d0,d2		; D2=X2-X1
+	bge.s	.xdpos		; salta se positivo..
+	addq.w	#2,d1		; ..altrimenti sposta l'indice
+	neg.w	d2		; e rendi positiva la differenza
+	.xdpos:
+	moveq	#$f,D6		; maschera per i 4 bit bassi
+	and.w	d0,D6		; selezionali in D4
+	
+				; solo se DL_Fill=1
+	move.b	D6,d5		; calcola numero del bit da invertire
+	not.b	d5		; (la BCHG numera i bit in modo inverso	
+
+	lsr.w	#3,d0		; offset X:
+				; Allinea a byte (serve per BCHG)
+	add.w	d0,A6		; aggiunge all'indirizzo
+				; nota che anche se l'indirizzo
+				; e` dispari non fa nulla perche`
+				; il blitter non tiene conto del
+				; bit meno significativo di BLTxPT
+
+	ror.w	#4,D6		; D4 = valore di shift A
+	ori.w	#$0B4A,D6		; aggiunge l'opportuno
+				; Minterm (OR o EOR)
+	swap	D6		; valore di BLTCON0 nella word alta
+		
+	cmp.w	d2,d3		; confronta DiffX e DiffY
+	bge.s	.dygdx		; salta se >=0..
+	addq.w	#1,d1		; altrimenti setta il bit 0 del'indice
+	exg	d2,d3		; e scambia le Diff
+	.dygdx:
+	add.w	d2,d2		; D2 = 2*DiffX
+	move.w	d2,d0		; copia in D0
+	sub.w	d3,d0		; D0 = 2*DiffX-DiffY
+	addx.w	d1,d1		; moltiplica per 2 l'indice e
+				; contemporaneamente aggiunge il flag
+				; X che vale 1 se 2*DiffX-DiffY<0
+				; (settato dalla sub.w)
+	move.b	OKTS(PC,d1.w),D6	; legge l'ottante
+	swap	d2		; valore BLTBMOD in word alta
+	move.w	d0,d2		; word bassa D2=2*DiffX-DiffY
+	sub.w	d3,d2		; word bassa D2=2*DiffX-2*DiffY
+	moveq	#6,d1		; valore di shift e di test per
+				; la wait blitter 
+	lsl.w	d1,d3		; calcola il valore di BLTSIZE
+	add.w	#$42,d3
+
+	BSR	WaitBlitter
+	bchg	d5,(A6)		; Inverte il primo bit della linea
+
+	move.l	D6,BLTCON0	; BLTCON0/1
+	move.l	D2,BLTBMOD	; BLTBMOD e BLTAMOD
+	move.l	A6,BLTCPTH	; BLTCPT
+	move.w	D0,BLTAPTL	; BLTAPTL
+	move.l	A6,BLTDPTH	; BLTDPT - indirizzo schermo
+	move.w	D3,BLTSIZE	; BLTSIZE
+	LEA	(A1),A6		; BACKUP DESTINATION
+	.skip:
+	RTS
+
+	OKTS:
+	DC.B 3,3+$40
+	DC.B 19,19+$40
+	DC.B 11,11+$40
+	DC.B 23,23+$40
 
 __BLIT_3D_IN_PLACE:
 	LEA	BUFFER3D,A4
@@ -262,7 +371,8 @@ __BLIT_3D_IN_PLACE:
 	LEA	TEXTUREPLANE,A5
 	ADD.L	#(bypl*he)-4-2,A5
 	BSR.W	WaitBlitter
-	MOVE.L	#$FFFFFFFF,BLTAFWM		; BLTAFWM
+	MOVE.W	#$FFFF,BLTAFWM		; BLTAFWM
+	MOVE.W	#$FFFF,BLTALWM		; BLTALWM
 	MOVE.W	#%0000100111110000,BLTCON0	; BLTCON0
 	MOVE.W	#%0000000000010010,BLTCON1	; BLTCON1
 	MOVE.W	#4,BLTAMOD		; BLTAMOD
@@ -271,6 +381,88 @@ __BLIT_3D_IN_PLACE:
 	MOVE.L	A5,BLTDPTH
 	MOVE.W	#he*64+wblt/16,BLTSIZE	; Start Blitter (Blitsize)
 	RTS
+
+UPDATE_COORDS_OPT:			; RETURNS (A0)=X - 2(A0)=Y
+	TST.L	(A0)		; X-Y=0?
+	BNE.S	.skip1
+	MOVE.L	4(A0),D5
+	NEG.W	D5
+	SWAP	D5
+	NEG.W	D5
+	MOVE.L	D5,4(A0)
+	BRA.S	.skipAll
+	.skip1:
+
+	CMP.L	#(wblt<<16),(A0)	; X=MAX & Y=0?
+	BNE.S	.skip2
+	MOVE.L	4(A0),D5
+	SWAP	D5
+	MOVE.L	D5,4(A0)
+	BRA.S	.skipAll
+	.skip2:
+
+	CMP.L	#(wblt<<16)+hblt,(A0) ; X=MAX & Y=MAX?
+	BNE.S	.skip3
+	MOVE.L	4(A0),D5
+	NEG.W	D5
+	SWAP	D5
+	NEG.W	D5
+	MOVE.L	D5,4(A0)
+	BRA.S	.skipAll
+	.skip3:
+
+	CMP.L	#hblt,(A0)	; X=0 & Y=MAX?
+	BNE.S	.skip4
+	MOVE.L	4(A0),D5
+	SWAP	D5
+	MOVE.L	D5,4(A0)
+	BRA.S	.skipAll
+	.skip4:
+
+	.skipAll:
+	MOVE.W	4(A0),D5		; DIR
+	ADD.W	D5,(A0)
+	MOVE.W	6(A0),D5
+	ADD.W	D5,2(A0)
+	RTS
+
+UPDATE_COORDS:			; RETURNS (A0)=X - 2(A0)=Y
+	TST.W	(A0)		; X=0?
+	BNE.S	.skip1
+	CMP.W	#he,2(A0)		; Y=MAX?
+	BNE.S	.skip1
+	MOVE.W	#0,4(A0)
+	MOVE.W	#-2,6(A0)
+	BRA.S	.skipAll
+	.skip1:
+
+	TST.W	(A0)		; X=0?
+	BNE.S	.not0
+	TST.W	2(A0)		; Y=0?
+	BNE.S	.not0
+	MOVE.W	#2,4(A0)
+	MOVE.W	#0,6(A0)
+	BRA.S	.skipAll
+	.not0:
+	CMP.W	#he,2(A0)		; Y=MAX?
+	BNE.S	.notYMax
+	MOVE.W	#-2,4(A0)
+	MOVE.W	#0,6(A0)
+	BRA.S	.skipAll
+	.notYMax:
+	CMP.W	#wi-32,(A0)	; X=MAX?
+	BNE.S	.notXMax
+	MOVE.W	#0,4(A0)
+	MOVE.W	#2,6(A0)
+	.notXMax:
+
+	.skipAll:
+	MOVE.W	4(A0),D5		; DIR
+	ADD.W	D5,(A0)
+	MOVE.W	6(A0),D5
+	ADD.W	D5,2(A0)
+	RTS
+; ## VECTOR PART ##
 
 __SET_MED_VALUES:
 	MOVE.W	MED_STEPSEQ_POS,D0		; UPDATE STEPSEQUENCER
@@ -550,20 +742,6 @@ __DITHER_PLANE:
 	DBRA	D4,.outerloop
 	RTS
 
-__BLIT_NOISE_FILLED:
-	ADD.L	#(bypl*40)-2,A4
-	ADD.L	#(bypl*80)-2,A5
-	BSR.W	WaitBlitter
-	MOVE.L	#$FFFFFFFF,BLTAFWM		; BLTAFWM
-	MOVE.W	#%0011100111110000,BLTCON0	; BLTCON0
-	MOVE.W	#%0000000000000010,BLTCON1	; BLTCON1
-	MOVE.W	#0,BLTAMOD		; BLTAMOD
-	MOVE.W	#0,BLTDMOD		; Init modulo Dest D
-	MOVE.L	A4,BLTAPTH		; BLTAPT  (fisso alla figura sorgente)
-	MOVE.L	A5,BLTDPTH
-	MOVE.W	#40*64+wi/16,BLTSIZE	; Start Blitter (Blitsize)
-	RTS
-
 __BLK_INTRO:
 	BSR.W	__BLK_VECT
 	MOVE.W	AUDIOCHLEV_3,D1
@@ -591,25 +769,17 @@ __BLK_INTRO:
 	MOVE.W	MED_TRK_3_COUNT,D7
 
 	; ## NOISE SECTION ##
-	MOVE.W	#(bypl/2)*40-1,D4
+	MOVE.W	#(bypl/2)*50-1,D4
 	TST.B	FRAME_STROBE
 	BNE.W	.oddFrame
 	MOVE.B	#1,FRAME_STROBE
 	LEA	BGNOISE1,A4
-	BSR.W	__RANDOMIZE_PLANE
-	LEA	BGNOISE1,A4
-	LEA	BGNOISE2,A5
-	BSR.W	__BLIT_NOISE_FILLED
 	BRA.W	.evenFrame
 	.oddFrame:
 	MOVE.B	#0,FRAME_STROBE
 	LEA	BGNOISE2,A4
-	BSR.W	__RANDOMIZE_PLANE
-	LEA	BGNOISE2,A4
-	LEA	BGNOISE1,A5
-	BSR.W	__BLIT_NOISE_FILLED
 	.evenFrame:
-
+	BSR.W	__RANDOMIZE_PLANE
 	; ## NOISE SECTION ##
 	RTS
 
@@ -720,7 +890,16 @@ __BLK_BG:
 
 __BLK_VECT:
 	LEA	BUFFER3D,A1
+	;LEA	TEXTUREPLANE,A1
+	MOVE.L	A1,A6
+	BSR.W	__WIPE_PLANE
+	BSR.W	__BLIT_VECTORS
 	BSR.W	__BLIT_3D_IN_PLACE
+
+	MOVE.W	AUDIOCHLEV_0,D1
+	LSR.W	#1,D1
+	LSL.W	#1,D1
+	ADD.W	#2,D1
 	RTS
 
 ;********** Fastmem Data **********
@@ -743,13 +922,19 @@ LINEINDEX:	DC.W 0
 DUMMYINDEX:	DC.W PIXELSIDE_W+1
 DUMMYINDEXPLOT:	DC.W 0
 FRAMESINDEX:	DC.W TXT_FRMSKIP
-GRADIENT_REGISTERS:	DC.W $0182,$0188,$0198,$019A,$019C,$019E
 MED_SONG_POS:	DC.W 0		; Well the position...
 MED_BLOCK_LINE:	DC.W 0		; Line of block
 AUDIOCHLEV_0:	DC.W 0
 AUDIOCHLEV_1:	DC.W 0
 AUDIOCHLEV_2:	DC.W 0
 AUDIOCHLEV_3:	DC.W 0
+COORDS_1:		DC.W wblt,0,2,0	; WPOS, HPOS, WDIR, HDIR
+COORDS_2:		DC.W 0,hblt,-2,0	; WPOS, HPOS, WDIR, HDIR
+COORDS_3:		DC.W 312,0,-4,0	; WPOS, HPOS, WDIR, HDIR
+COORDS_4:		DC.W 4,hblt,4,0	; WPOS, HPOS, WDIR, HDIR
+COORDS_5:		DC.W 160,0,-8,0	; WPOS, HPOS, WDIR, HDIR
+COORDS_6:		DC.W 160,hblt,8,0	; WPOS, HPOS, WDIR, HDIR
+
 
 FONT:		DC.L 0,0		; SPACE CHAR
 		INCBIN "c_font_leftpadding2.raw",0
@@ -790,51 +975,6 @@ FG_COLS_TBL:	DC.W $0665,$0665
 		DC.W $0333,$0333
 		DC.W $0444,$0444
 		DC.W $0555,$0555
-
-GRADIENT:		DC.B $2C,$10
-		DC.B $35,$11
-		DC.B $39,$21
-		DC.B $3F,$22
-		DC.B $47,$32
-		DC.B $48,$33
-		DC.B $51,$34
-		DC.B $55,$44
-		DC.B $5B,$45
-		DC.B $63,$55
-		DC.B $64,$56
-		DC.B $6D,$57
-		DC.B $71,$67
-		DC.B $76,$68
-		DC.B $7F,$78
-		DC.B $80,$79
-		DC.B $8C,$89
-		DC.B $97,$88
-		DC.B $98,$78
-		DC.B $9E,$77
-		DC.B $A3,$67
-		DC.B $A5,$66
-		DC.B $AC,$67
-		DC.B $AE,$77
-		DC.B $B2,$78
-		DC.B $B7,$88
-		DC.B $B9,$89
-		DC.B $C2,$79
-		DC.B $C8,$78
-		DC.B $CB,$68
-		DC.B $D6,$67
-		DC.B $D8,$57
-		DC.B $E1,$56
-		DC.B $E9,$46
-		DC.B $EC,$45
-		DC.B $F6,$44
-		DC.B $FA,$34
-		DC.B $00,$00 ; PAL FIX
-		DC.B $01,$33
-		DC.B $0A,$23
-		DC.B $0B,$22
-		DC.B $16,$21
-		DC.B $1B,$11
-		DC.B $20,$10
 
 ;*******************************************************************************
 	SECTION	ChipData,DATA_C	;declared data that must be in chipmem
@@ -878,19 +1018,51 @@ COPPER:
 	DC.W $013C,0,$13E,0	; 7
 
 	.BplPtrs:
-	DC.W $E0,0,$E2,0
-	DC.W $E4,0,$E6,0
-	DC.W $E8,0,$EA,0
-	DC.W $EC,0,$EE,0
-	DC.W $F0,0,$F2,0
-	DC.W $F4,0,$F6,0	;full 6 ptrs, in case you increase bpls
+	DC.W $E0,0
+	DC.W $E2,0
+	DC.W $E4,0
+	DC.W $E6,0
+	DC.W $E8,0
+	DC.W $EA,0
+	DC.W $EC,0
+	DC.W $EE,0
+	DC.W $F0,0
+	DC.W $F2,0
+	DC.W $F4,0
+	DC.W $F6,0		;full 6 ptrs, in case you increase bpls
 	DC.W $100,bpls*$1000+$200	;enable bitplanes
 	;DC.W $100,bpls*$1000+%011000000000
 
 	.Waits:
-	DS.W COP_WAITS*2-2+(COP_WAITS-1)*COP_COLS_REGS*2
+	DC.W $4D07,$FF00		; ## START OF NOISE PART ##
+	.BplPtrs2:
+	DC.W $E0,0
+	DC.W $E2,0
+	DC.W $E4,0
+	DC.W $E6,0
 
-	;DC.W $FFDF,$FFFE		; allow VPOS>$ff
+	DC.W $5607,$FF00		; ## NOISE REPOINTED ONLY ON ONE PLANE ##
+	.BplPtrs3:
+	DC.W $EC,0
+	DC.W $EE,0
+
+	DC.W $9A07,$FF00		; ## NOISE REPOINTED ONLY ON BOTH PLANES ##
+	.BplPtrs4:
+	DC.W $E0,0
+	DC.W $E2,0
+	DC.W $E4,0
+	DC.W $E6,0
+
+	DC.W $F607,$FF00		; ## END OF NOISE PART ##
+	.BplPtrs5:
+	DC.W $E0,0
+	DC.W $E2,0
+	DC.W $E4,0
+	DC.W $E6,0
+	DC.W $EC,0
+	DC.W $EE,0
+
+	DC.W $FFDF,$FFFE		; allow VPOS>$ff
 	DC.W $3507,$FF00		; ## RASTER END ## #$12C?
 	DC.W $009A,$0010		; CLEAR RASTER BUSY FLAG
 	DC.W $FFFF,$FFFE		; magic value to end copperlist
@@ -902,13 +1074,11 @@ COPPER:
 CHAR_BUFFER:	DS.B 8
 CHAR_ROTATION:	DS.B 8
 BLEEDTOP:		DS.B bypl
-BGNOISE0		DS.B 48*bypl
-BGNOISE1:		DS.B 80*bypl
-BGNOISE2:		DS.B 80*bypl
-		DS.B 48*bypl
+BGNOISE1:		DS.B 50*bypl
+BGNOISE2:		DS.B 50*bypl
+BLEEDVECTOR:	DS.B he/4*bypl
 TEXTUREPLANE:	DS.B he*bypl
 BGEMPTY:		DS.B he*bypl
-BGMASKPRE		DS.B 48*bypl
 BGMASK:		DS.B he*bypl
 BGFILLED:		DS.B he*bypl
 BUFFER3D:		DS.B he*bypl	; bigger to hold zoom
