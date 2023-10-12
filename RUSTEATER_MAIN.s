@@ -18,7 +18,7 @@ PIXELSIDE_H	EQU 32
 TXT_FRMSKIP	EQU PIXELSIDE_W*6
 wblt		EQU wi-32
 hblt		EQU he
-COP_WAITS		EQU 44
+COP_WAITS		EQU 65
 COP_COLS_REGS	EQU 6
 ;*************
 _PushColors:	MACRO
@@ -53,40 +53,16 @@ Demo:			;a4=VBR, a6=Custom Registers Base addr
 	LEA	BGMASKPRE,A0
 	LEA	COPPER\.BplPtrs+24,A1
 	BSR.W	PokePtrs
-	; # NOISE AREA ##
-	;LEA	BGNOISE1,A0
-	;LEA	COPPER\.BplPtrs2,A1
-	;BSR.W	PokePtrs
-	;LEA	BGNOISE1,A0
-	;LEA	-2(A0),A0
-	;LEA	COPPER\.BplPtrs2+8,A1
-	;BSR.W	PokePtrs
-	;LEA	BGNOISE1,A0
-	;LEA	COPPER\.BplPtrs4,A1
-	;BSR.W	PokePtrs
-	;LEA	BGNOISE1,A0
-	;LEA	2(A0),A0
-	;LEA	COPPER\.BplPtrs4+8,A1
-	;BSR.W	PokePtrs
-	;; # NOISE AREA ##
-	;LEA	BGMASK,A0
-	;LEA	COPPER\.BplPtrs3,A1
-	;BSR.W	PokePtrs
-	;LEA	BGEMPTY,A0
-	;LEA	COPPER\.BplPtrs5,A1
-	;BSR.W	PokePtrs
-	;LEA	BGEMPTY,A0
-	;LEA	COPPER\.BplPtrs5+8,A1
-	;BSR.W	PokePtrs
 
 	; #### CPU INTENSIVE TASKS BEFORE STARTING MUSIC
-	LEA	TEXTUREPLANE,A4	; FILLS A PLANE
-	MOVE.L	#$F5A505A5,D5	; PARAMS
+	LEA	BUFFER3D,A4	; FILLS A PLANE
+	MOVE.L	#$5A5AA5A5,D5	; PARAMS
 	BSR.W	__RandomWord	; PARS
 	ROR.L	D3,D5		; PARS
-	;BSR.W	__TEXTURIZE_PLANE
-	MOVE.L	#$5A5A5A5A,D5	; PARAMS
-	;BSR.W	__TEXTURIZE_PLANE
+	BSR.W	__TEXTURIZE_PLANE
+	BSR.W	__TEXTURIZE_PLANE
+	BSR.W	__TEXTURIZE_PLANE
+	BSR.W	__TEXTURIZE_PLANE
 
 	LEA	BGMASK,A0
 	LEA	BGFILLED,A1
@@ -99,12 +75,16 @@ Demo:			;a4=VBR, a6=Custom Registers Base addr
 	;_PushColors	BG_COLS_TBL,#0,$DFF190
 	;_PushColors	FG_COLS_TBL,#0,$DFF198
 	CLR.L	D7
+
 	; #### EXTRACT COPPERLISTS  ######
-	LEA	GRADIENT,A0
-	LEA	COPPER\.Waits,A1
+	LEA	GRADIENT_VALS,A0
+	LEA	COPPER_BUFFER,A1	; COPPER_BUFFER
 	LEA	GRADIENT_REGISTERS,A3
 	BSR.W	__DECRUNCH_COPPERLIST
-
+	; #### EXTRACT COPPERLISTS  ######
+	LEA	COPPER_BUFFER,A4
+	LEA	COPPER\.Waits,A5
+	BSR.W	__BLIT_GRADIENT_IN_COPPER
 	; #### CPU INTENSIVE TASKS BEFORE STARTING MUSIC
 
 	; in photon's wrapper comment:;move.w d2,$9a(a6) ;INTENA
@@ -168,6 +148,10 @@ MainLoop:
 
 	BTST	#6,$BFE001	; POTINP - LMB pressed?
 	BNE.S	.skip
+	LEA	COPPER_BUFFER,A4
+	LEA	COPPER\.Waits,A5
+	BSR.W	__BLIT_GRADIENT_IN_COPPER
+	BRA.S	.skip
 	LEA	BUFFER3D,A4	; FILLS A PLANE
 	MOVE.L	#$5A5AA5A5,D5	; PARAMS
 	BSR.W	__RandomWord	; PARS
@@ -254,6 +238,18 @@ __DECRUNCH_COPPERLIST:
 	DBRA	D6,.innerLoop
 	.skip:
 	DBRA	D7,.loop
+	RTS
+
+__BLIT_GRADIENT_IN_COPPER:
+	BSR.W	WaitBlitter
+	MOVE.L	#$FFFFFFFF,BLTAFWM		; BLTAFWM
+	MOVE.W	#%0000100111110000,BLTCON0	; BLTCON0
+	MOVE.W	#%0000000000000000,BLTCON1	; BLTCON1
+	MOVE.W	#0,BLTAMOD		; BLTAMOD
+	MOVE.W	#0,BLTDMOD		; Init modulo Dest D
+	MOVE.L	A4,BLTAPTH		; BLTAPT  (fisso alla figura sorgente)
+	MOVE.L	A5,BLTDPTH
+	MOVE.W	#7*64+((COP_WAITS*2-2+(COP_WAITS-1)*COP_COLS_REGS*2)/2),BLTSIZE	; Start Blitter (Blitsize)
 	RTS
 
 __BLIT_3D_IN_PLACE:
@@ -791,50 +787,7 @@ FG_COLS_TBL:	DC.W $0665,$0665
 		DC.W $0444,$0444
 		DC.W $0555,$0555
 
-GRADIENT:		DC.B $2C,$10
-		DC.B $35,$11
-		DC.B $39,$21
-		DC.B $3F,$22
-		DC.B $47,$32
-		DC.B $48,$33
-		DC.B $51,$34
-		DC.B $55,$44
-		DC.B $5B,$45
-		DC.B $63,$55
-		DC.B $64,$56
-		DC.B $6D,$57
-		DC.B $71,$67
-		DC.B $76,$68
-		DC.B $7F,$78
-		DC.B $80,$79
-		DC.B $8C,$89
-		DC.B $97,$88
-		DC.B $98,$78
-		DC.B $9E,$77
-		DC.B $A3,$67
-		DC.B $A5,$66
-		DC.B $AC,$67
-		DC.B $AE,$77
-		DC.B $B2,$78
-		DC.B $B7,$88
-		DC.B $B9,$89
-		DC.B $C2,$79
-		DC.B $C8,$78
-		DC.B $CB,$68
-		DC.B $D6,$67
-		DC.B $D8,$57
-		DC.B $E1,$56
-		DC.B $E9,$46
-		DC.B $EC,$45
-		DC.B $F6,$44
-		DC.B $FA,$34
-		DC.B $00,$00 ; PAL FIX
-		DC.B $01,$33
-		DC.B $0A,$23
-		DC.B $0B,$22
-		DC.B $16,$21
-		DC.B $1B,$11
-		DC.B $20,$10
+GRADIENT_VALS:	INCLUDE "CopGradients.i"
 
 ;*******************************************************************************
 	SECTION	ChipData,DATA_C	;declared data that must be in chipmem
@@ -843,7 +796,7 @@ MED_MODULE:	INCBIN "med/RustEater_2022_FIX3.med"
 _chipzero:	DC.L 0
 _MED_MODULE:
 
-COPPER:
+COPPER:	; #### COPPERLIST ####################################################
 	DC.W $1FC,0	; Slow fetch mode, remove if AGA demo.
 	DC.W $8E,$2C81	; 238h display window top, left | DIWSTRT - 11.393
 	DC.W $90,$2CC1	; and bottom, right.	| DIWSTOP - 11.457
@@ -899,6 +852,7 @@ COPPER:
 	SECTION ChipBuffers,BSS_C	;BSS doesn't count toward exe size
 ;*******************************************************************************
 
+COPPER_BUFFER:	DS.W COP_WAITS*2-2+(COP_WAITS-1)*COP_COLS_REGS*2
 CHAR_BUFFER:	DS.B 8
 CHAR_ROTATION:	DS.B 8
 BLEEDTOP:		DS.B bypl
