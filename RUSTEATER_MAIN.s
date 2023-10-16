@@ -18,10 +18,10 @@ PIXELSIDE_H	EQU 32
 TXT_FRMSKIP	EQU PIXELSIDE_W*6
 wblt		EQU wi-32
 hblt		EQU he
-COP_WAITS		EQU 57
+COP_WAITS		EQU 153
 COP_COLS_REGS	EQU 6
-COP_FRAMES	EQU 38
-COP_BLIT_SIZE	EQU COP_WAITS*2-2+(COP_WAITS-1)*COP_COLS_REGS*2
+COP_FRAMES	EQU 44
+COP_BLIT_SIZE	EQU COP_COLS_REGS*2+2
 ;*************
 _PushColors:	MACRO
 	LEA	\1,A0
@@ -41,11 +41,14 @@ Demo:			;a4=VBR, a6=Custom Registers Base addr
 	MOVE.W	#%1000001111100000,DMACON
 	;BSET	#10,BPLCON0
 	;*--- start copper ---*
+
 	LEA	BGNOISE0,A0
+	;LEA	2(A0),A0
 	LEA	COPPER\.BplPtrs,A1
 	BSR.W	PokePtrs
 	LEA	BGNOISE0,A0
 	LEA	-2(A0),A0
+	MOVE.W	#0,(A0)
 	LEA	COPPER\.BplPtrs+8,A1
 	BSR.W	PokePtrs
 	LEA	TEXTUREPLANE,A0
@@ -54,18 +57,44 @@ Demo:			;a4=VBR, a6=Custom Registers Base addr
 	LEA	BGMASKPRE,A0
 	LEA	COPPER\.BplPtrs+24,A1
 	BSR.W	PokePtrs
-
 	; #### CPU INTENSIVE TASKS BEFORE STARTING MUSIC
 	LEA	TEXTUREPLANE,A4	; FILLS A PLANE
-	MOVE.L	#$5A5AA5A5,D5	; PARAMS
+	MOVE.L	#$F05AA5A5,D5	; PARAMS
 	BSR.W	__RandomWord	; PARS
 	ROR.L	D3,D5		; PARS
-	;MOVE.L	#$F0A5FF00,D5
-	;MOVE.B	D3,D5
-	BSR.W	__DITHER_PLANE
 	BSR.W	__TEXTURIZE_PLANE
-	BSR.W	__TEXTURIZE_PLANE
-	BSR.W	__DITHER_PLANE
+	LEA	TEXTUREPLANE,A4
+	LEA	(A4),A5
+	BSR.W	__BLIT_TEXTURE_IN_PLACE
+	BSR.W	__BLIT_TEXTURE_IN_PLACE
+	BSR.W	__BLIT_TEXTURE_IN_PLACE
+	BSR.W	__BLIT_TEXTURE_IN_PLACE
+	BSR.W	__BLIT_TEXTURE_IN_PLACE
+	BSR.W	__BLIT_TEXTURE_IN_PLACE
+	BSR.W	__BLIT_TEXTURE_IN_PLACE
+
+	; #### CORNERS :)
+	;LEA	TEXTUREPLANE,A4	; FILLS A CORNER
+	;MOVE.W	#$9,D7
+	;MOVE.l	#$AAAAAAAA,D0
+	;.l:
+	;NOT.L	D0
+	;MOVE.L	D0,D5
+	;MOVE.W	D7,D6
+	;LSR.W	D6
+	;LSR.L	D6,D5
+	;ADD.W	#1,D6
+	;LSR.L	D6,D5
+	;MOVE.B	D0,D5
+	;LSL.W	D6,D5
+	;NOT.B	D5
+	;MOVE.L	D5,(A4)		; TWO LINES
+	;ADD	#bypl,A4
+	;LSR.L	D5
+	;MOVE.L	D5,(A4)		; TWO LINES
+	;ADD	#bypl,A4
+	;DBRA	D7,.l
+	; #### CORNERS :)
 
 	LEA	BGMASK,A0
 	LEA	BGFILLED,A1
@@ -161,15 +190,22 @@ MainLoop:
 
 	BTST	#6,$BFE001	; POTINP - LMB pressed?
 	BNE.S	.skip
-	;BRA.S	.skip
+	;MOVE.L	#$5A5AA5A5,D5	; PARAMS
+	MOVE.L	#$F0F0F0F0,D5	; PARAMS
 	LEA	TEXTUREPLANE,A4	; FILLS A PLANE
-	MOVE.L	#$5A5AA5A5,D5	; PARAMS
+	;MOVE.L	(A4),D5
 	BSR.W	__RandomWord	; PARS
-	ROR.L	D3,D5		; PARS
+	ROL.L	D3,D5		; PARS
 	BSR.W	__TEXTURIZE_PLANE
-	BSR.W	__TEXTURIZE_PLANE
-	BSR.W	__TEXTURIZE_PLANE
-	BSR.W	__TEXTURIZE_PLANE
+	LEA	TEXTUREPLANE,A4
+	LEA	(A4),A5
+	BSR.W	__BLIT_TEXTURE_IN_PLACE
+	BSR.W	__BLIT_TEXTURE_IN_PLACE
+	BSR.W	__BLIT_TEXTURE_IN_PLACE
+	BSR.W	__BLIT_TEXTURE_IN_PLACE
+	BSR.W	__BLIT_TEXTURE_IN_PLACE
+	BSR.W	__BLIT_TEXTURE_IN_PLACE
+	BSR.W	__BLIT_TEXTURE_IN_PLACE
 	.skip:
 
 	.WaitRasterCopper:
@@ -221,7 +257,7 @@ VBint:				; Blank template VERTB interrupt
 	rte
 
 __DECRUNCH_COPPERLIST:
-	MOVE.W	#COP_WAITS-1,D7
+	MOVE.W	#COP_WAITS,D7
 	.loop:
 	TST.W	(A0)		; ZEROED WORD = allow VPOS>$ff
 	BNE.S	.notFF
@@ -267,9 +303,24 @@ __BLIT_GRADIENT_IN_COPPER:
 	MOVE.W	#%0000000000000000,BLTCON1	; BLTCON1
 	MOVE.W	#0,BLTAMOD		; BLTAMOD
 	MOVE.W	#0,BLTDMOD		; Init modulo Dest D
+	MOVE.L	(A4)+,(A5)+		; Trick for alignment ;)
 	MOVE.L	A4,BLTAPTH		; BLTAPT  (fisso alla figura sorgente)
 	MOVE.L	A5,BLTDPTH
-	MOVE.W	#(16<<6)+COP_BLIT_SIZE/16,BLTSIZE	; Start Blitter (Blitsize)
+	MOVE.W	#(COP_WAITS<<6)+COP_BLIT_SIZE,BLTSIZE	; Start Blitter (Blitsize)
+	RTS
+
+__BLIT_TEXTURE_IN_PLACE:
+	ADD.L	#(bypl*he/8),A5
+	BSR.W	WaitBlitter
+	MOVE.L	#$FFFFFFFF,BLTAFWM		; BLTAFWM
+	MOVE.W	#%0001100111110000,BLTCON0	; BLTCON0
+	MOVE.W	#%0000000000000000,BLTCON1	; BLTCON1
+	MOVE.W	#4,BLTAMOD		; BLTAMOD
+	MOVE.W	#4,BLTDMOD		; Init modulo Dest D
+	MOVE.L	A4,BLTAPTH		; BLTAPT  (fisso alla figura sorgente)
+	MOVE.L	A5,BLTDPTH
+	MOVE.W	#he/8*64+wblt/16,BLTSIZE	; Start Blitter (Blitsize)
+	ADD.L	#(bypl*he/8),A4
 	RTS
 
 __BLIT_3D_IN_PLACE:
@@ -336,9 +387,9 @@ __RANDOMIZE_PLANE:
 	RTS
 
 __RandomWord:
-	BSR	._RandomByte
+	BSR	.__RandomByte
 	ROL.W	#$8,D5
-	._RandomByte:
+	.__RandomByte:
 	MOVE.B	$DFF007,D5	;$dff00a $dff00b for mouse pos
 	;MOVE.W	MED_TRK_3_COUNT,D5	; AUDIOCHLEV_0
 	MOVE.B	$BFD800,D3
@@ -544,22 +595,29 @@ __HW_DISPLACE:
 	RTS
 
 __TEXTURIZE_PLANE:
-	MOVE.W	#he/4/2-1,D4	; QUANTE LINEE
-	.outerloop:		; NUOVA RIGA
-	NOT.L	D5
-	MOVE.W	#(bypl/2)-1,D6	; RESET D6
-	.innerloop:		; LOOP KE CICLA LA BITMAP
+	MOVE.W	#he/64-1,D3	; QUANTE LINEE
+	.outerLoop:
+	MOVE.W	#he/32,D4		; QUANTE LINEE
+	.coreLoop:		; NUOVA RIGA
+	MOVE.W	#(bypl/4)-1-1,D6	; RESET D6
+	.lineLoop:		; LOOP KE CICLA LA BITMAP
 	MOVE.L	D5,(A4)+
-	DBRA	D6,.innerloop
+	SWAP	D5
+	NOT.W	D5
+	DBRA	D6,.lineLoop
+	NOT.B	D5
 	ROR.L	D5
-	DBRA	D4,.outerloop
+	DBRA	D4,.coreLoop
+	NOT.B	D5
+	ROR.L	D5
+	DBRA	D3,.outerLoop
 	RTS
 
 __DITHER_PLANE:
-	MOVE.W	#he/4/2-1,D4	; QUANTE LINEE
+	MOVE.W	#he/4-1,D4	; QUANTE LINEE
 	.outerloop:		; NUOVA RIGA
 	NOT.L	D5
-	MOVE.W	#(bypl/2)-1,D6	; RESET D6
+	MOVE.W	#(bypl/4)-1,D6	; RESET D6
 	.innerloop:		; LOOP KE CICLA LA BITMAP
 	MOVE.L	D5,(A4)+
 	DBRA	D6,.innerloop
@@ -808,10 +866,6 @@ FG_COLS_TBL:	DC.W $0665,$0665
 
 GRADIENT_REGISTERS:	DC.W $0182,$0188,$0198,$019A,$019C,$019E
 GRADIENT_INDEX:	DC.W 0
-GRADIENT_PTRS:
-	REPT COP_FRAMES*2
-		DC.L 0
-	ENDR
 GRADIENT_VALS:	INCLUDE "CopGradients.i"
 
 ;*******************************************************************************
@@ -866,7 +920,7 @@ COPPER:	; #### COPPERLIST ####################################################
 	;DC.W $100,bpls*$1000+%011000000000
 
 	.Waits:
-	DS.W COP_BLIT_SIZE
+	DS.W COP_BLIT_SIZE*COP_WAITS+2	; +2 vpos >$FF
 
 	;DC.W $FFDF,$FFFE		; allow VPOS>$ff
 	DC.W $3507,$FF00		; ## RASTER END ## #$12C?
@@ -876,11 +930,8 @@ COPPER:	; #### COPPERLIST ####################################################
 ;*******************************************************************************
 	SECTION ChipBuffers,BSS_C	;BSS doesn't count toward exe size
 ;*******************************************************************************
-
-COPPER_BUFFER:	
-	REPT COP_FRAMES
-		DS.W COP_WAITS*2-2+(COP_WAITS-1)*COP_COLS_REGS*2
-	ENDR
+GRADIENT_PTRS:	DS.L COP_FRAMES*2
+COPPER_BUFFER:	DS.W COP_FRAMES*(COP_BLIT_SIZE*COP_WAITS+2)	; +2 vpos >$FF
 CHAR_BUFFER:	DS.B 8
 CHAR_ROTATION:	DS.B 8
 BLEEDTOP:		DS.B bypl
