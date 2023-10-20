@@ -1,135 +1,111 @@
-; https://gradient-blaster.grahambates.com/?points=001@0,444@123,110@255&steps=256&blendMode=linear&ditherMode=goldenRatioMono&target=amigaOcs&ditherAmount=25
+; https://gradient-blaster.grahambates.com/?points=000@0,445@35,443@47,112@104,111@132,222@200,444@224,443@237,000@255&steps=256&blendMode=perceptual&ditherMode=blueNoiseMono&target=amigaOcs&ditherAmount=26
 Gradient:
 	dc.w $2c07,$fffe
 	dc.w $180,$000
-	dc.w $2d07,$fffe
+	dc.w $3707,$fffe
 	dc.w $180,$001
+	dc.w $3907,$fffe
+	dc.w $180,$111
+	dc.w $3c07,$fffe
+	dc.w $180,$112
+	dc.w $3f07,$fffe
+	dc.w $180,$222
+	dc.w $4207,$fffe
+	dc.w $180,$223
 	dc.w $4707,$fffe
-	dc.w $180,$111
-	dc.w $4807,$fffe
-	dc.w $180,$001
-	dc.w $4907,$fffe
-	dc.w $180,$111
-	dc.w $4f07,$fffe
-	dc.w $180,$112
-	dc.w $5007,$fffe
-	dc.w $180,$111
-	dc.w $5107,$fffe
-	dc.w $180,$112
-	dc.w $5307,$fffe
-	dc.w $180,$111
-	dc.w $5407,$fffe
-	dc.w $180,$112
+	dc.w $180,$334
+	dc.w $4d07,$fffe
+	dc.w $180,$445
+	dc.w $5207,$fffe
+	dc.w $180,$444
+	dc.w $5807,$fffe
+	dc.w $180,$443
+	dc.w $6007,$fffe
+	dc.w $180,$332
+	dc.w $6107,$fffe
+	dc.w $180,$443
+	dc.w $6207,$fffe
+	dc.w $180,$333
 	dc.w $6307,$fffe
-	dc.w $180,$222
+	dc.w $180,$443
 	dc.w $6407,$fffe
-	dc.w $180,$112
-	dc.w $6607,$fffe
-	dc.w $180,$222
-	dc.w $6807,$fffe
-	dc.w $180,$112
-	dc.w $6907,$fffe
-	dc.w $180,$222
-	dc.w $7307,$fffe
-	dc.w $180,$223
-	dc.w $7407,$fffe
-	dc.w $180,$222
+	dc.w $180,$332
 	dc.w $7607,$fffe
-	dc.w $180,$223
+	dc.w $180,$222
 	dc.w $7707,$fffe
-	dc.w $180,$222
+	dc.w $180,$332
 	dc.w $7807,$fffe
-	dc.w $180,$223
-	dc.w $8007,$fffe
-	dc.w $180,$333
-	dc.w $8107,$fffe
-	dc.w $180,$223
-	dc.w $8307,$fffe
-	dc.w $180,$333
-	dc.w $8507,$fffe
-	dc.w $180,$223
-	dc.w $8607,$fffe
-	dc.w $180,$333
+	dc.w $180,$222
+	dc.w $8807,$fffe
+	dc.w $180,$112
+	dc.w $9807,$fffe
+	dc.w $180,$001
+	dc.w $9907,$fffe
+	dc.w $180,$112
 	dc.w $9a07,$fffe
-	dc.w $180,$334
+	dc.w $180,$111
 	dc.w $9b07,$fffe
-	dc.w $180,$333
-	dc.w $9d07,$fffe
-	dc.w $180,$444
-	dc.w $9e07,$fffe
-	dc.w $180,$334
-	dc.w $9f07,$fffe
-	dc.w $180,$333
+	dc.w $180,$112
+	dc.w $9c07,$fffe
+	dc.w $180,$111
 	dc.w $a007,$fffe
-	dc.w $180,$444
-	dc.w $b107,$fffe
-	dc.w $180,$333
-	dc.w $b207,$fffe
-	dc.w $180,$444
-	dc.w $b307,$fffe
-	dc.w $180,$443
-	dc.w $b407,$fffe
-	dc.w $180,$333
-	dc.w $b507,$fffe
-	dc.w $180,$443
-	dc.w $b607,$fffe
-	dc.w $180,$333
-	dc.w $b707,$fffe
-	dc.w $180,$443
-	dc.w $b807,$fffe
-	dc.w $180,$333
-	dc.w $ce07,$fffe
-	dc.w $180,$332
-	dc.w $cf07,$fffe
-	dc.w $180,$333
-	dc.w $d007,$fffe
-	dc.w $180,$332
-	dc.w $d107,$fffe
-	dc.w $180,$333
-	dc.w $d207,$fffe
-	dc.w $180,$332
-	dc.w $db07,$fffe
+	dc.w $180,$001
+	dc.w $a107,$fffe
+	dc.w $180,$111
+	dc.w $a407,$fffe
+	dc.w $180,$001
+	dc.w $a507,$fffe
+	dc.w $180,$111
+	dc.w $a907,$fffe
+	dc.w $180,$001
+	dc.w $aa07,$fffe
+	dc.w $180,$111
+	dc.w $ae07,$fffe
+	dc.w $180,$001
+	dc.w $af07,$fffe
+	dc.w $180,$111
+	dc.w $e307,$fffe
 	dc.w $180,$222
-	dc.w $dc07,$fffe
-	dc.w $180,$332
-	dc.w $dd07,$fffe
+	dc.w $e407,$fffe
+	dc.w $180,$111
+	dc.w $e607,$fffe
 	dc.w $180,$222
-	dc.w $df07,$fffe
-	dc.w $180,$332
-	dc.w $e007,$fffe
+	dc.w $e707,$fffe
+	dc.w $180,$111
+	dc.w $e807,$fffe
 	dc.w $180,$222
-	dc.w $e107,$fffe
-	dc.w $180,$332
-	dc.w $e207,$fffe
-	dc.w $180,$222
+	dc.w $e907,$fffe
+	dc.w $180,$111
 	dc.w $eb07,$fffe
-	dc.w $180,$221
+	dc.w $180,$222
 	dc.w $ec07,$fffe
-	dc.w $180,$222
+	dc.w $180,$111
 	dc.w $ed07,$fffe
-	dc.w $180,$221
-	dc.w $ee07,$fffe
 	dc.w $180,$222
+	dc.w $ee07,$fffe
+	dc.w $180,$111
 	dc.w $ef07,$fffe
-	dc.w $180,$221
+	dc.w $180,$222
+	dc.w $fd07,$fffe
+	dc.w $180,$333
+	dc.w $fe07,$fffe
+	dc.w $180,$222
+	dc.w $ff07,$fffe
+	dc.w $180,$333
 	dc.w $ffdf,$fffe ; PAL fix
-	dc.w $507,$fffe
-	dc.w $180,$111
-	dc.w $607,$fffe
-	dc.w $180,$221
-	dc.w $707,$fffe
-	dc.w $180,$111
-	dc.w $807,$fffe
-	dc.w $180,$221
 	dc.w $907,$fffe
-	dc.w $180,$111
-	dc.w $d07,$fffe
-	dc.w $180,$110
-	dc.w $e07,$fffe
-	dc.w $180,$111
-	dc.w $f07,$fffe
-	dc.w $180,$110
-	dc.w $1007,$fffe
-	dc.w $180,$111
+	dc.w $180,$444
 	dc.w $1107,$fffe
+	dc.w $180,$443
+	dc.w $1a07,$fffe
+	dc.w $180,$332
+	dc.w $1e07,$fffe
+	dc.w $180,$222
+	dc.w $1f07,$fffe
+	dc.w $180,$221
+	dc.w $2207,$fffe
+	dc.w $180,$111
+	dc.w $2407,$fffe
 	dc.w $180,$110
+	dc.w $2507,$fffe
+	dc.w $180,$000
