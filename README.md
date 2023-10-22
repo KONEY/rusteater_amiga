@@ -1,7 +1,7 @@
 # rusteater_amiga
 KONEY Seventh Amiga Intro amd second 40k
 
-
+![Preview](https://github.com/KONEY/rusteater_amiga/blob/main/RUSTEATER_SCREEN.png)
 
 Using OctaMED PlayRoutines: https://github.com/KONEY/octamed_playroutines_amiga
 
