@@ -2666,3 +2666,61 @@
 	DC.B $2A,$00
 	DC.B $2B,$11	; TOT 57 LINES
 
+	DC.B $2C,$11
+	DC.B $37,$22
+	DC.B $38,$12
+	DC.B $39,$22
+	DC.B $3A,$12
+	DC.B $3B,$22
+	DC.B $40,$23
+	DC.B $41,$22
+	DC.B $42,$23
+	DC.B $45,$33
+	DC.B $46,$23
+	DC.B $47,$33
+	DC.B $48,$23
+	DC.B $49,$33
+	DC.B $4B,$34
+	DC.B $4C,$33
+	DC.B $4D,$34
+	DC.B $56,$44
+	DC.B $57,$45
+	DC.B $58,$34
+	DC.B $59,$45
+	DC.B $6D,$55
+	DC.B $6E,$45
+	DC.B $6F,$55
+	DC.B $90,$56
+	DC.B $91,$55
+	DC.B $93,$56
+	DC.B $94,$55
+	DC.B $97,$56
+	DC.B $98,$55
+	DC.B $99,$56
+	DC.B $9A,$55
+	DC.B $9B,$56
+	DC.B $9C,$55
+	DC.B $9D,$56
+	DC.B $C3,$55
+	DC.B $C4,$56
+	DC.B $C8,$55
+	DC.B $C9,$56
+	DC.B $CA,$55
+	DC.B $CB,$56
+	DC.B $CC,$55
+	DC.B $D0,$56
+	DC.B $D1,$55
+	DC.B $F6,$44
+	DC.B $F7,$55
+	DC.B $F8,$44
+	DC.B $00,$00	; VPOSFF
+	DC.B $03,$33
+	DC.B $05,$44
+	DC.B $06,$33
+	DC.B $0F,$22
+	DC.B $10,$33
+	DC.B $11,$22
+	DC.B $1E,$11
+	DC.B $1F,$22
+	DC.B $20,$11	; TOT 57 LINES
+
