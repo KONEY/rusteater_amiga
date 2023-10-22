@@ -1,113 +1,115 @@
-; https://gradient-blaster.grahambates.com/?points=111@0,222@26,445@59,555@89,556@128,555@164,444@201,111@255&steps=256&blendMode=linear&ditherMode=goldenRatio&target=amigaOcs&ditherAmount=30
+; https://gradient-blaster.grahambates.com/?points=111@0,445@46,555@75,556@132,555@196,111@255&steps=256&blendMode=perceptual&ditherMode=whiteNoiseMono&target=amigaOcs&ditherAmount=53
 Gradient:
 	dc.w $2c07,$fffe
-	dc.w $180,$011
-	dc.w $2d07,$fffe
 	dc.w $180,$111
+	dc.w $2d07,$fffe
+	dc.w $180,$001
+	dc.w $2e07,$fffe
+	dc.w $180,$111
+	dc.w $2f07,$fffe
+	dc.w $180,$001
+	dc.w $3007,$fffe
+	dc.w $180,$111
+	dc.w $3507,$fffe
+	dc.w $180,$112
+	dc.w $3607,$fffe
+	dc.w $180,$111
+	dc.w $3707,$fffe
+	dc.w $180,$112
+	dc.w $3b07,$fffe
+	dc.w $180,$222
 	dc.w $4007,$fffe
-	dc.w $180,$121
-	dc.w $4107,$fffe
-	dc.w $180,$212
-	dc.w $4307,$fffe
-	dc.w $180,$121
-	dc.w $4407,$fffe
-	dc.w $180,$222
-	dc.w $4507,$fffe
-	dc.w $180,$212
-	dc.w $4607,$fffe
-	dc.w $180,$222
-	dc.w $4e07,$fffe
 	dc.w $180,$223
-	dc.w $5107,$fffe
-	dc.w $180,$323
-	dc.w $5207,$fffe
-	dc.w $180,$223
-	dc.w $5307,$fffe
-	dc.w $180,$233
-	dc.w $5407,$fffe
+	dc.w $4807,$fffe
 	dc.w $180,$333
-	dc.w $5907,$fffe
+	dc.w $4907,$fffe
+	dc.w $180,$223
+	dc.w $4a07,$fffe
+	dc.w $180,$333
+	dc.w $4c07,$fffe
 	dc.w $180,$334
-	dc.w $6207,$fffe
-	dc.w $180,$344
-	dc.w $6307,$fffe
+	dc.w $5507,$fffe
 	dc.w $180,$445
-	dc.w $7807,$fffe
-	dc.w $180,$545
-	dc.w $7907,$fffe
+	dc.w $6a07,$fffe
+	dc.w $180,$555
+	dc.w $6b07,$fffe
 	dc.w $180,$445
-	dc.w $7a07,$fffe
-	dc.w $180,$455
-	dc.w $7b07,$fffe
+	dc.w $6c07,$fffe
 	dc.w $180,$555
-	dc.w $7c07,$fffe
-	dc.w $180,$545
-	dc.w $7d07,$fffe
-	dc.w $180,$455
-	dc.w $7e07,$fffe
+	dc.w $6d07,$fffe
+	dc.w $180,$445
+	dc.w $7007,$fffe
 	dc.w $180,$555
-	dc.w $9a07,$fffe
+	dc.w $8b07,$fffe
 	dc.w $180,$556
-	dc.w $9b07,$fffe
+	dc.w $8c07,$fffe
 	dc.w $180,$555
-	dc.w $9d07,$fffe
+	dc.w $9207,$fffe
 	dc.w $180,$556
-	dc.w $9e07,$fffe
+	dc.w $9607,$fffe
 	dc.w $180,$555
-	dc.w $9f07,$fffe
-	dc.w $180,$556
-	dc.w $bb07,$fffe
-	dc.w $180,$555
-	dc.w $bc07,$fffe
+	dc.w $9907,$fffe
 	dc.w $180,$556
 	dc.w $bd07,$fffe
 	dc.w $180,$555
-	dc.w $da07,$fffe
-	dc.w $180,$545
-	dc.w $db07,$fffe
-	dc.w $180,$454
-	dc.w $dc07,$fffe
-	dc.w $180,$545
-	dc.w $dd07,$fffe
+	dc.w $be07,$fffe
+	dc.w $180,$556
+	dc.w $c207,$fffe
+	dc.w $180,$555
+	dc.w $c307,$fffe
+	dc.w $180,$556
+	dc.w $c607,$fffe
+	dc.w $180,$555
+	dc.w $c707,$fffe
+	dc.w $180,$556
+	dc.w $c907,$fffe
+	dc.w $180,$555
+	dc.w $cc07,$fffe
+	dc.w $180,$556
+	dc.w $cd07,$fffe
+	dc.w $180,$555
+	dc.w $ce07,$fffe
+	dc.w $180,$556
+	dc.w $d207,$fffe
+	dc.w $180,$555
+	dc.w $d607,$fffe
+	dc.w $180,$556
+	dc.w $d807,$fffe
+	dc.w $180,$555
+	dc.w $f407,$fffe
 	dc.w $180,$444
-	dc.w $de07,$fffe
-	dc.w $180,$455
-	dc.w $df07,$fffe
+	dc.w $f607,$fffe
+	dc.w $180,$555
+	dc.w $f707,$fffe
 	dc.w $180,$444
-	dc.w $e007,$fffe
-	dc.w $180,$454
-	dc.w $e107,$fffe
-	dc.w $180,$444
-	dc.w $f807,$fffe
-	dc.w $180,$344
-	dc.w $f907,$fffe
-	dc.w $180,$434
-	dc.w $fa07,$fffe
-	dc.w $180,$343
-	dc.w $fb07,$fffe
-	dc.w $180,$434
-	dc.w $fc07,$fffe
-	dc.w $180,$333
 	dc.w $ffdf,$fffe ; PAL fix
-	dc.w $907,$fffe
-	dc.w $180,$323
-	dc.w $a07,$fffe
-	dc.w $180,$232
-	dc.w $b07,$fffe
-	dc.w $180,$323
-	dc.w $c07,$fffe
-	dc.w $180,$222
-	dc.w $d07,$fffe
-	dc.w $180,$223
+	dc.w $207,$fffe
+	dc.w $180,$333
+	dc.w $307,$fffe
+	dc.w $180,$444
+	dc.w $407,$fffe
+	dc.w $180,$333
 	dc.w $e07,$fffe
 	dc.w $180,$222
-	dc.w $1a07,$fffe
-	dc.w $180,$122
-	dc.w $1b07,$fffe
-	dc.w $180,$212
-	dc.w $1c07,$fffe
-	dc.w $180,$121
+	dc.w $f07,$fffe
+	dc.w $180,$333
+	dc.w $1107,$fffe
+	dc.w $180,$222
+	dc.w $1207,$fffe
+	dc.w $180,$333
+	dc.w $1307,$fffe
+	dc.w $180,$222
 	dc.w $1d07,$fffe
-	dc.w $180,$212
-	dc.w $1e07,$fffe
+	dc.w $180,$111
+	dc.w $1f07,$fffe
+	dc.w $180,$222
+	dc.w $2007,$fffe
+	dc.w $180,$111
+	dc.w $2207,$fffe
+	dc.w $180,$222
+	dc.w $2307,$fffe
+	dc.w $180,$111
+	dc.w $2a07,$fffe
+	dc.w $180,$000
+	dc.w $2b07,$fffe
 	dc.w $180,$111

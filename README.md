@@ -1,22 +1,13 @@
 # rusteater_amiga
-KONEY Seventh Amiga Intro!
+KONEY Seventh Amiga Intro amd secpmd 40k
 
-TODO:
-#Hide draw area
-#Fix separation between chars
-Fix text end
-Fix variable scroll speed
-Test rastertime
-Add displacement
-Find good random values and make a table
-Precalc rotations
-#Blit with texture
-Fix music!
-#Reduce SPACE pixel
-Second frame strobo
-add DITHER plane
-Check slow-downs
-Test color changes on noise
+![Preview](https://github.com/KONEY/ketamuskolar_amiga/blob/main/preview.png)
 
-Start Gradiend
+Using OctaMED PlayRoutines: https://github.com/KONEY/octamed_playroutines_amiga
+
+WEB: http://www.koney.org/blog-
+
+Pouet: https://www.pouet.net/prod.php?which=
+
+Copper gradients created using:
 https://gradient-blaster.grahambates.com/?points=333@8,110@69,000@138,222@216,334@249&steps=256&blendMode=linear&ditherMode=goldenRatio&target=amigaOcs&ditherAmount=25
