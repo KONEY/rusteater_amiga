@@ -1,7 +1,7 @@
 # rusteater_amiga
-KONEY Seventh Amiga Intro amd secpmd 40k
+KONEY Seventh Amiga Intro amd second 40k
 
-![Preview](https://github.com/KONEY/ketamuskolar_amiga/blob/main/preview.png)
+
 
 Using OctaMED PlayRoutines: https://github.com/KONEY/octamed_playroutines_amiga
 
