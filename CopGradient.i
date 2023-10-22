@@ -1,115 +1,113 @@
-; https://gradient-blaster.grahambates.com/?points=111@0,333@10,334@15,110@80,001@129,001@140,221@187,444@235,334@245,111@255&steps=256&blendMode=perceptual&ditherMode=whiteNoiseMono&target=amigaOcs&ditherAmount=21
+; https://gradient-blaster.grahambates.com/?points=111@0,222@26,445@59,555@89,556@128,555@164,444@201,111@255&steps=256&blendMode=linear&ditherMode=goldenRatio&target=amigaOcs&ditherAmount=30
 Gradient:
-	dc.w $2b07,$fffe
+	dc.w $2c07,$fffe
+	dc.w $180,$011
+	dc.w $2d07,$fffe
 	dc.w $180,$111
-	dc.w $3007,$fffe
-	dc.w $180,$222
-	dc.w $3507,$fffe
-	dc.w $180,$333
-	dc.w $3907,$fffe
-	dc.w $180,$334
 	dc.w $4007,$fffe
-	dc.w $180,$333
+	dc.w $180,$121
 	dc.w $4107,$fffe
+	dc.w $180,$212
+	dc.w $4307,$fffe
+	dc.w $180,$121
+	dc.w $4407,$fffe
+	dc.w $180,$222
+	dc.w $4507,$fffe
+	dc.w $180,$212
+	dc.w $4607,$fffe
+	dc.w $180,$222
+	dc.w $4e07,$fffe
+	dc.w $180,$223
+	dc.w $5107,$fffe
+	dc.w $180,$323
+	dc.w $5207,$fffe
 	dc.w $180,$223
 	dc.w $5307,$fffe
-	dc.w $180,$222
-	dc.w $5b07,$fffe
-	dc.w $180,$112
-	dc.w $6507,$fffe
-	dc.w $180,$111
-	dc.w $7407,$fffe
-	dc.w $180,$110
+	dc.w $180,$233
+	dc.w $5407,$fffe
+	dc.w $180,$333
+	dc.w $5907,$fffe
+	dc.w $180,$334
+	dc.w $6207,$fffe
+	dc.w $180,$344
+	dc.w $6307,$fffe
+	dc.w $180,$445
+	dc.w $7807,$fffe
+	dc.w $180,$545
+	dc.w $7907,$fffe
+	dc.w $180,$445
+	dc.w $7a07,$fffe
+	dc.w $180,$455
+	dc.w $7b07,$fffe
+	dc.w $180,$555
 	dc.w $7c07,$fffe
-	dc.w $180,$000
+	dc.w $180,$545
 	dc.w $7d07,$fffe
-	dc.w $180,$110
+	dc.w $180,$455
 	dc.w $7e07,$fffe
-	dc.w $180,$000
-	dc.w $7f07,$fffe
-	dc.w $180,$110
-	dc.w $8107,$fffe
-	dc.w $180,$000
-	dc.w $8307,$fffe
-	dc.w $180,$110
-	dc.w $8507,$fffe
-	dc.w $180,$000
-	dc.w $a307,$fffe
-	dc.w $180,$001
-	dc.w $a507,$fffe
-	dc.w $180,$000
-	dc.w $a707,$fffe
-	dc.w $180,$001
-	dc.w $ab07,$fffe
-	dc.w $180,$000
-	dc.w $ad07,$fffe
-	dc.w $180,$001
-	dc.w $b107,$fffe
-	dc.w $180,$000
-	dc.w $b207,$fffe
-	dc.w $180,$001
-	dc.w $b407,$fffe
-	dc.w $180,$000
-	dc.w $b507,$fffe
-	dc.w $180,$001
-	dc.w $b807,$fffe
-	dc.w $180,$000
-	dc.w $b907,$fffe
-	dc.w $180,$001
-	dc.w $ba07,$fffe
-	dc.w $180,$000
+	dc.w $180,$555
+	dc.w $9a07,$fffe
+	dc.w $180,$556
+	dc.w $9b07,$fffe
+	dc.w $180,$555
+	dc.w $9d07,$fffe
+	dc.w $180,$556
+	dc.w $9e07,$fffe
+	dc.w $180,$555
+	dc.w $9f07,$fffe
+	dc.w $180,$556
 	dc.w $bb07,$fffe
-	dc.w $180,$001
+	dc.w $180,$555
+	dc.w $bc07,$fffe
+	dc.w $180,$556
 	dc.w $bd07,$fffe
-	dc.w $180,$000
-	dc.w $c207,$fffe
-	dc.w $180,$001
-	dc.w $c307,$fffe
-	dc.w $180,$000
-	dc.w $ca07,$fffe
-	dc.w $180,$110
-	dc.w $ce07,$fffe
-	dc.w $180,$111
-	dc.w $d307,$fffe
-	dc.w $180,$110
-	dc.w $d407,$fffe
-	dc.w $180,$111
-	dc.w $d607,$fffe
-	dc.w $180,$110
-	dc.w $d807,$fffe
-	dc.w $180,$111
+	dc.w $180,$555
+	dc.w $da07,$fffe
+	dc.w $180,$545
+	dc.w $db07,$fffe
+	dc.w $180,$454
+	dc.w $dc07,$fffe
+	dc.w $180,$545
+	dc.w $dd07,$fffe
+	dc.w $180,$444
+	dc.w $de07,$fffe
+	dc.w $180,$455
 	dc.w $df07,$fffe
-	dc.w $180,$110
+	dc.w $180,$444
 	dc.w $e007,$fffe
-	dc.w $180,$221
+	dc.w $180,$454
 	dc.w $e107,$fffe
-	dc.w $180,$111
-	dc.w $e207,$fffe
-	dc.w $180,$110
-	dc.w $e307,$fffe
-	dc.w $180,$221
-	dc.w $f007,$fffe
-	dc.w $180,$222
+	dc.w $180,$444
+	dc.w $f807,$fffe
+	dc.w $180,$344
 	dc.w $f907,$fffe
-	dc.w $180,$332
+	dc.w $180,$434
 	dc.w $fa07,$fffe
-	dc.w $180,$222
+	dc.w $180,$343
 	dc.w $fb07,$fffe
-	dc.w $180,$332
-	dc.w $fe07,$fffe
+	dc.w $180,$434
+	dc.w $fc07,$fffe
 	dc.w $180,$333
 	dc.w $ffdf,$fffe ; PAL fix
-	dc.w $1007,$fffe
-	dc.w $180,$443
-	dc.w $1107,$fffe
-	dc.w $180,$444
-	dc.w $1807,$fffe
-	dc.w $180,$334
-	dc.w $2107,$fffe
-	dc.w $180,$223
-	dc.w $2507,$fffe
+	dc.w $907,$fffe
+	dc.w $180,$323
+	dc.w $a07,$fffe
+	dc.w $180,$232
+	dc.w $b07,$fffe
+	dc.w $180,$323
+	dc.w $c07,$fffe
 	dc.w $180,$222
-	dc.w $2607,$fffe
-	dc.w $180,$112
-	dc.w $2807,$fffe
+	dc.w $d07,$fffe
+	dc.w $180,$223
+	dc.w $e07,$fffe
+	dc.w $180,$222
+	dc.w $1a07,$fffe
+	dc.w $180,$122
+	dc.w $1b07,$fffe
+	dc.w $180,$212
+	dc.w $1c07,$fffe
+	dc.w $180,$121
+	dc.w $1d07,$fffe
+	dc.w $180,$212
+	dc.w $1e07,$fffe
 	dc.w $180,$111
