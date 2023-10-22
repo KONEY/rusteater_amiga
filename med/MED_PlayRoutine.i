@@ -961,7 +961,7 @@ _IntHANDler:	;MOVE.W	#$0F0,$DFF180		; show rastertime left down to $12c
 		BLT.S	.plr_loop2
 	; -------- THE REST... ---------------------------------------------------
 		MOVE.W	mmd_pseqnum(A2),MED_SONG_POS	;SONG POSITION | KONEY
-		MOVE.W	mmd_pline(A2),MED_BLOCK_LINE	;LINE POSITION | KONEY
+		;MOVE.W	mmd_pline(A2),MED_BLOCK_LINE	;LINE POSITION | KONEY - NEEDS FIX
 		BSR.S	AdvSngPtr
 		.nonewnote:
 		BSR.W	DoFX
