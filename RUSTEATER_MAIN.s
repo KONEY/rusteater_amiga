@@ -592,7 +592,7 @@ GRADIENT_VALS:	INCLUDE "CopGradients.i"
 ;*******************************************************************************
 	SECTION	ChipData,DATA_C	;declared data that must be in chipmem
 ;*******************************************************************************
-MED_MODULE:	INCBIN "med/RustEater_2022_FIX3.med"
+MED_MODULE:	INCBIN "med/RustEater_2022_FIX4.med"
 _chipzero:	DC.L 0
 _MED_MODULE:
 
