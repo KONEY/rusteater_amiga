@@ -123,6 +123,9 @@ MainLoop:
 	MOVE.L	(A3,D5.W),A4	; THANKS HEDGEHOG!!
 	JSR	(A4)		; EXECUTE SUBROUTINE BLOCK#
 
+	;MOVE.B	$dff007,$DFF186	; flash test
+	;MOVE.B	$dff006,$DFF18E	; test
+
 	; ## TEXT SECTION ##
 	BSR.W	__FETCH_TXT
 	; ## TEXT SECTION ##
@@ -176,7 +179,6 @@ MainLoop:
 	BNE.S	.WaitRasterCopper
 	;MOVE.W	#$0000,$DFF180	; show rastertime left down to $12c
 	MOVE.W	#$8010,INTENA
-
 	;*--- main loop end ---*
 	BTST	#6,$BFE001	; POTINP - LMB pressed?
 	BEQ.W	.exit
