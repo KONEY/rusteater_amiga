@@ -109,10 +109,3 @@ _WaitBlitterNasty: 	MACRO
 	NOP
 	;MOVE.W	#$0000,$DFF180	; show rastertime left down to $12c
 		ENDM
-
-;WaitBlitterNasty:			; IF BLITTER WORKING... WAIT!
-;	;MOVE.W	#$0F00,$DFF180	; show rastertime left down to $12c
-;	MOVE.W	#$8400,DMACON	; BLIT NASTY ENABLE
-;	MOVE.W	#$400,DMACON	; BLIT NASTY DISABLE
-;	;MOVE.W	#$0000,$DFF180	; show rastertime left down to $12c
-;	RTS

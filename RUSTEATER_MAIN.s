@@ -54,7 +54,7 @@ Demo:			;a4=VBR, a6=Custom Registers Base addr
 	LEA	TEXTUREPLANE,A0
 	LEA	COPPER\.BplPtrs+16,A1
 	BSR.W	PokePtrs
-	LEA	BGMASK,A0
+	LEA	BGMASK1,A0
 	LEA	COPPER\.BplPtrs+24,A1
 	BSR.W	PokePtrs
 
@@ -75,12 +75,14 @@ Demo:			;a4=VBR, a6=Custom Registers Base addr
 	BSR.W	__SCANLINIZE_PLANE	; __TEXTURIZE_PLANE
 	BSR.W	__SCANLINIZE_PLANE	; __TEXTURIZE_PLANE
 
-	LEA	BGMASK,A0
-	LEA	BGFILLED,A1
+	LEA	BGMASK1,A1
+	LEA	BGMASK2,A2
+	LEA	BGFILLED,A0
 	MOVE.W	#bypl*he/4-1,D0
 	.loop:
 	MOVE.L	#-1,(A0)+		; FILL THE PIXEL
 	MOVE.L	#-1,(A1)+		; FILL THE PIXEL
+	MOVE.L	#-1,(A2)+		; FILL THE PIXEL
 	DBRA	D0,.loop
 
 	;BSR.W	__RND
@@ -115,6 +117,19 @@ Demo:			;a4=VBR, a6=Custom Registers Base addr
 	MOVE.L	#COPPER,COP1LC
 ;********************  main loop  ********************
 MainLoop:	
+	;*--- swap buffers ---*
+	MOVEM.L	DrawBuffer(PC),A0-A1
+	EXG	A1,A0
+	MOVEM.L	A0-A1,DrawBuffer	;draw into a2, show a3
+	;*--- show one... ---*
+	LEA	COPPER\.BplPtrs+24,A1
+	;*--- ...draw into the other(a2) ---*
+
+	BSR.W	PokePtrs
+	; ## SCROLLING SECTION ##
+	BSR.W	__SCROLL_X
+	; ## SCROLLING SECTION ##
+
 	;* FOR TIMED EVENTS ON BLOCKS ****
 	;BSR.W	__SET_MED_VALUES
 	MOVE.W	MED_SONG_POS,D5
@@ -131,13 +146,14 @@ MainLoop:
 	; ## TEXT SECTION ##
 
 	; ## MASKING SECTION ##
+	LEA	__BLIT_PIXEL,A2
 	MOVE.W	DUMMYINDEXPLOT,D0
 	ADD.W	#$1,D0
 	AND.W	#$7,D0
 	MOVE.W	D0,DUMMYINDEXPLOT
 	TST.W	D0
 	BNE.S	.dontPlot
-	LEA	BGMASK+48*bypl+bypl-PIXELSIDE_W/16*2,A5
+	LEA	BGMASK1+48*bypl+bypl-PIXELSIDE_W/16*2,A5
 	LEA	CHAR_BUFFER,A0
 	ADD.W	LINEINDEX,A0
 	MOVE.W	#5-1,D0
@@ -149,7 +165,7 @@ MainLoop:
 	BRA.S	.on
 	.off:
 	LEA	BGFILLED,A4
-	BSR.W	__BLIT_PIXEL
+	JSR	(A2)		; __BLIT_PIXEL
 	.on:
 
 	ADD.L	#bypl*PIXELSIDE_H,A5
@@ -164,15 +180,9 @@ MainLoop:
 	SUBI.W	#1,DUMMYINDEX
 	; ## MASKING SECTION ##
 
-	; ## SCROLLING SECTION ##
-	LEA	BGMASK+48*bypl,A5
-	BSR.W	__SCROLL_X
-	; ## SCROLLING SECTION ##
-
 	;BTST	#6,$BFE001	; POTINP - LMB pressed?
 	;BNE.S	.skip
 	;.skip:
-
 	.WaitRasterCopper:
 	;MOVE.W	#$0A0F,$DFF180	; show rastertime left down to $12c
 	BTST	#$4,INTENAR+1
@@ -252,12 +262,12 @@ __BLIT_GRADIENT_IN_COPPER:
 	.dontReset:
 	MOVE.W	D0,GRADIENT_INDEX
 	LEA	COPPER\.Waits,A5
-	BSR.W	WaitBlitter
+	MOVE.L	(A4)+,(A5)+	; Trick for alignment ;)
+	_WaitBlitterNasty
 	MOVE.L	#$FFFFFFFF,BLTAFWM
 	MOVE.L	#(%0000100111110000<<16),BLTCON0
 	MOVE.W	#0,BLTAMOD
 	MOVE.W	#0,BLTDMOD
-	MOVE.L	(A4)+,(A5)+	; Trick for alignment ;)
 	MOVE.L	A4,BLTAPTH
 	MOVE.L	A5,BLTDPTH
 	MOVE.W	#(COP_WAITS<<6)+COP_BLIT_SIZE,BLTSIZE
@@ -330,6 +340,7 @@ __RANDOMIZE_PLANE:
 	ROR.L	D1
 	SWAP	D1
 	DBRA	D2,.outerLoop
+	;MOVE.L	D5,(A4)
 	RTS
 
 __RND:
@@ -351,7 +362,7 @@ __RND:
 	RTS
 
 __BLIT_PIXEL:
-	BSR	WaitBlitter
+	_WaitBlitterNasty
 	MOVE.L	#(%0000100111110000<<16),BLTCON0
 	MOVE.L	#$FFFFFFFF,BLTAFWM
 	MOVE.W	#$0,BLTAMOD
@@ -362,12 +373,17 @@ __BLIT_PIXEL:
 	RTS
 
 __SCROLL_X:
-	ADD.W	#bypl*(PIXELSIDE_H*5)-2,A5
-	BSR	WaitBlitter
+	MOVE.L	ViewBuffer,A4	; DOUBLE
+	MOVE.L	DrawBuffer,A5	; BUFFERING ;)
+	ADD.L	#bypl*48+bypl*(PIXELSIDE_H*5)-1,A4
+	ADD.L	#bypl*48+bypl*(PIXELSIDE_H*5)-1,A5
+	;ADD.W	#bypl*(PIXELSIDE_H*5)-1,A5
+	;BSR	WaitBlitter
+	_WaitBlitterNasty
 	MOVE.L	#(((SCROLL_SPEED<<12)+%100111110000)<<16)+%10,BLTCON0
 	MOVE.L	#$FFFFFFFF,BLTAFWM
 	MOVE.L	#$0,BLTAMOD
-	MOVE.L	A5,BLTAPTH
+	MOVE.L	A4,BLTAPTH
 	MOVE.L	A5,BLTDPTH
 	MOVE.W	#(PIXELSIDE_H*5)*64+wi/16,BLTSIZE
 	RTS
@@ -450,7 +466,7 @@ __SCANLINIZE_PLANE:
 __BLIT_NOISE_FILLED:
 	ADD.L	#(bypl*40)-2,A4
 	ADD.L	#(bypl*80)-2,A5
-	BSR.W	WaitBlitter
+	_WaitBlitterNasty
 	MOVE.L	#$FFFFFFFF,BLTAFWM
 	MOVE.L	#(%0011100111110000<<16)+%10,BLTCON0
 	MOVE.W	#0,BLTAMOD
@@ -461,7 +477,6 @@ __BLIT_NOISE_FILLED:
 	RTS
 
 __NOISE_SECTION:
-	LEA	__BLIT_PIXEL,A2
 	MOVEM.L	RNDBYTE0,A1
 	MOVE.W	MED_SONG_POS,D5
 	TST.B	FRAME_STROBE
@@ -536,6 +551,8 @@ MED_SONG_POS:	DC.W 0		; Well the position...
 NOISE_SEED:	DC.L 0
 RNDBYTE0:		DC.L __RND\._byte2
 RNDBYTE1:		DC.L __RND\._byte
+DrawBuffer:	DC.L BGMASK1		; pointers to buffers
+ViewBuffer:	DC.L BGMASK2		; to be swapped
 
 FONT:		DC.L 0,0		; SPACE CHAR
 		INCBIN "c_font_leftpadding2.raw",0
@@ -652,6 +669,7 @@ BGNOISE1:		DS.B 80*bypl
 BGNOISE2:		DS.B 80*bypl
 TEXTUREPLANE:	DS.B he*bypl
 BGEMPTY:		DS.B he*bypl
-BGMASK:		DS.B he*bypl
+BGMASK1:		DS.B he*bypl
+BGMASK2:		DS.B he*bypl
 BGFILLED:		DS.B he*bypl
 END
